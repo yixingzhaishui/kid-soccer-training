@@ -1,0 +1,29 @@
+import { useCallback,useEffect,useMemo,useState } from 'react';
+import { ChoiceCard } from '../components/ChoiceCard';
+import { ComparisonView } from '../components/ComparisonView';
+import { SceneCanvas } from '../components/SceneCanvas';
+import { finalFrame } from '../logic/timeline';
+import type { AnimatedScenario,ChoiceResult } from '../types/soccer';
+
+type Props={scene:AnimatedScenario;sceneIndex:number;total:number;onHome:()=>void;onBack:()=>void;onSpeak:(text:string)=>void;onResult:(result:ChoiceResult)=>void;onNext:()=>void};
+type Phase='watch'|'choose'|'rechoose'|'result'|'explain'|'compare';
+const predictions:Record<string,string>={wide:'Nolan gets open',ball:'Blue gets crowded',behind:'Pass road closes',pass:'Blue keeps ball',dribble:'Blue moves forward',wait:'Red takes ball',back:'Red turns away',stay:'Red gets a shot',slow:'Nolan arrives late',mark:'Pass gets blocked',goalie:'Red gets a shot',chase:'Middle opens up',go:'Nolan gets it back',stop:'Return pass closes',blocked:'Red wins ball',check:'Blue connects play',still:'Nolan stays covered',middle:'Blue switches sides',crowd:'Blue gets trapped',forward:'Defender loses help'};
+export function AnimatedSceneScreen({scene,sceneIndex,total,onHome,onBack,onSpeak,onResult,onNext}:Props){
+  const[phase,setPhase]=useState<Phase>('watch');const[runKey,setRunKey]=useState(0);const[selected,setSelected]=useState<ChoiceResult|undefined>();const setupFrame=useMemo(()=>finalFrame(scene.actors,scene.ballStart,scene.setupAnimation),[scene]);
+  const setupDone=useCallback(()=>{setPhase('choose');onSpeak(scene.stage===2?'What will happen next?':scene.prompt)},[onSpeak,scene]);
+  useEffect(()=>{setPhase('watch');setSelected(undefined);setRunKey((key)=>key+1);onSpeak(scene.introNarration)},[scene,onSpeak]);
+  const pick=(choiceId:string)=>{const found=scene.results.find((item)=>item.choiceId===choiceId)!;setSelected(found);setPhase('result');onResult(found)};
+  const resultDone=useCallback(()=>{if(!selected)return;setPhase('explain');onSpeak(selected.narration)},[onSpeak,selected]);
+  const replayAll=()=>{setSelected(undefined);setPhase('watch');setRunKey((key)=>key+1);onSpeak(scene.introNarration)};
+  const replayResult=()=>{if(!selected)return;setPhase('result');setRunKey((key)=>key+1)};
+  const chooseAgain=()=>{setSelected(undefined);setPhase('rechoose');setRunKey((key)=>key+1);onSpeak(scene.prompt)};
+  if(phase==='compare'&&selected)return <main className="screen scene-screen"><ComparisonView scene={scene} chosen={selected} onBack={()=>setPhase('explain')} onContinue={onNext}/></main>;
+  const steps=phase==='watch'||phase==='choose'?scene.setupAnimation:phase==='rechoose'?[]:selected?.animationSteps??[];const initial=phase==='result'||phase==='explain'||phase==='rechoose'?setupFrame:undefined;
+  return <main className="screen scene-screen"><header className="scene-header"><button className="icon-button" onClick={onBack} aria-label="Back to stories">‹</button><div><strong>{scene.title}</strong><span>{sceneIndex+1} of {total} · Stage {scene.stage}</span></div><button className="icon-button" onClick={onHome} aria-label="Go home">⌂</button></header>
+    <div className={`watch-banner ${phase}`}><span>{phase==='watch'?'👀':phase==='choose'||phase==='rechoose'?'🤔':phase==='result'?'🎬':'💡'}</span><strong>{phase==='watch'?'Watch the game…':phase==='choose'||phase==='rechoose'?(scene.stage===2?'What happens next?':scene.prompt):phase==='result'?'See what happens…':selected?.quality==='poor'?'Let’s learn from it':'Nice choice!'}</strong>{phase==='watch'&&<i/>}</div>
+    <SceneCanvas actors={scene.actors} ballStart={scene.ballStart} steps={steps} initial={initial} runKey={runKey} onComplete={phase==='watch'||phase==='choose'?setupDone:phase==='result'||phase==='explain'?resultDone:undefined}/>
+    {(phase==='choose'||phase==='rechoose')&&<div className="choice-area"><div className="choice-grid">{scene.choices.map((item)=>{const label=scene.stage===2?predictions[item.id]??item.label:item.label;return <ChoiceCard key={item.id} choice={{...item,label}} nolan={scene.actors.find((actor)=>actor.id==='nolan')!} onClick={()=>pick(item.id)}/>} )}</div>{scene.stage===3&&<p className="gentle-timer">⚡ The game is moving — choose when you’re ready.</p>}</div>}
+    {phase==='result'&&<div className="result-playing"><span>Players are showing your choice</span><i/></div>}
+    {phase==='explain'&&selected&&<section className={`explain-card ${selected.quality}`}><div className="explain-face">{selected.quality==='poor'?'🧐':'🥳'}</div><div><strong>{selected.quality==='best'?'Great choice!':selected.quality==='good'?'Good choice!':'See what happened?'}</strong><p>{selected.narration}</p><small>{selected.teamEffect}</small></div><div className="explain-actions"><button className="secondary" onClick={chooseAgain}>↩ Choose again</button><button className="secondary" onClick={replayResult}>↻ Replay result</button><button className="secondary compare-button" onClick={()=>setPhase('compare')}>▥ Compare choices</button><button className="primary" onClick={onNext}>Next story ›</button></div></section>}
+    {(phase==='choose'||phase==='rechoose'||phase==='explain')&&<button className="replay-whole" onClick={replayAll}>↻ Watch the whole scene again</button>}
+  </main>}
