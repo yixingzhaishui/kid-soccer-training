@@ -52,7 +52,7 @@ the test that prevents regression.
 | DM-04 | Track the runner | Pending | Verify goal-side tracking and return-pass denial. |
 | DM-05 | Break the line | Pending | Verify forward pass reaches a teammate, not a defender. |
 | DM-06 | Delay the counter | Repairing | Rebuilt as jockey + recovery; needs final individual visual sign-off. |
-| DM-07 | Drop between center backs | Repairing | Rebuild required: controlled build angle, then forward progression. |
+| DM-07 | Drop between center backs | Repairing | Rebuilt as a 7v7 split-centre-back build-out: Tom drops from ahead of the ball into the split, receives ball-side of the striker, then plays forward/right to the fullback. Individual visual and mobile sign-off is next. |
 | DM-08 | Show for the goalkeeper | Pending | Verify a safe outlet ahead of the goalkeeper, then progress. |
 | DM-09 | Turn away from first presser | Pending | Verify first touch is away from pressure. |
 | DM-10 | Switch from the base | Pending | Verify pass crosses to open side, not toward own goal. |
@@ -80,6 +80,8 @@ the test that prevents regression.
 ## Automated evidence currently required for every case
 
 - full 7v7 player count and in-bounds normalized coordinates;
+- visible possession delivery before Tom dribbles, shields, passes, crosses,
+  clears, or shoots in an attacking scene;
 - shot direction and own-goal-end rejection;
 - phone-size path contrast;
 - player-body overlap / hidden receiver rejection;

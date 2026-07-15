@@ -942,6 +942,11 @@ function optionDestination(
   const text = label.toLowerCase(),
     start = l.nolan,
     vertical = start.y < 32 ? -1 : 1;
+  // DM-07 is a build-out action, not a generic retreat. Tom drops only into
+  // the split centre-backs, receives facing the field, then progresses the
+  // ball. Keeping this coordinate explicit prevents the option card from
+  // showing a route back toward Blue's goal.
+  if (/drop between center backs/.test(text)) return p(start.x - 13, start.y);
   if (/drop|play back|recycle|reset|come short|support behind/.test(text))
     return clampPoint(p(start.x - 12, start.y - vertical * 5));
   if (/run away|stay high|watch outside|celebrate early/.test(text))
@@ -1195,6 +1200,69 @@ function enforceOptionResult(
     ];
   }
   return raw;
+}
+
+const roleBallActions = new Set<AnimationStep["action"]>([
+  "receive",
+  "dribble",
+  "shield",
+  "pass",
+  "cross",
+  "clear",
+  "shoot",
+]);
+const ballDeliveryActions = new Set<AnimationStep["action"]>([
+  "pass",
+  "cross",
+  "clear",
+]);
+
+/**
+ * An action only teaches soccer when the child can see how Tom got the ball.
+ * Some old generic templates began with Tom dribbling or passing even though
+ * Blue's centre-back still owned the ball. Establish a visible delivery first
+ * and move the remaining consequence later as one sequence.
+ */
+function establishTomPossession(
+  l: ReturnType<typeof layout>,
+  raw: AnimationStep[],
+): AnimationStep[] {
+  if (l.defending) return raw;
+  const ordered = [...raw].sort((a, b) => a.startTime - b.startTime);
+  const firstRoleBallAction = ordered.find(
+    (item) => item.actorId === "nolan" && roleBallActions.has(item.action),
+  );
+  if (!firstRoleBallAction) return raw;
+  const receivePoint = firstRoleBallAction.from ?? l.nolan;
+  const deliveryAlreadyShown = ordered.some((item) => {
+    if (item.startTime >= firstRoleBallAction.startTime || !item.to)
+      return false;
+    const actor = item.actorId
+      ? l.actors.find((candidate) => candidate.id === item.actorId)
+      : undefined;
+    return (
+      actor?.team === "blue" &&
+      ballDeliveryActions.has(item.action) &&
+      pointDistance(item.to, receivePoint) < 4
+    );
+  });
+  if (deliveryAlreadyShown) return raw;
+
+  const shifted = raw
+    .filter(
+      (item) =>
+        !(
+          item === firstRoleBallAction &&
+          item.action === "receive" &&
+          pointDistance(item.to ?? receivePoint, receivePoint) < 1.5
+        ),
+    )
+    .map((item) => ({ ...item, startTime: item.startTime + 1100 }));
+  return [
+    step(0, 650, "pass", "blue1", l.carrier, receivePoint),
+    step(600, 450, "receive", "nolan", receivePoint, receivePoint),
+    ...shifted,
+  ];
 }
 function semanticChoice(
   id: string,
@@ -2055,6 +2123,42 @@ function layout(row: InventoryRow, index: number) {
     ),
     goodTo = p(pos.good.x + unique + depthShift, pos.good.y + verticalShift),
     badTo = p(pos.bad.x + depthShift, pos.bad.y + unique + verticalShift);
+  if (row.id === "DM-07") {
+    // A real 7v7 build-out: the defensive midfielder begins ahead of the two
+    // centre-backs, drops into their split, receives away from the striker,
+    // then can play forward to the open fullback. The red striker starts
+    // beyond Tom, so Tom is never hidden behind the marker at the receive.
+    const buildNolan = p(37, 32),
+      buildCarrier = p(25, 22),
+      buildTarget = p(51, 14),
+      buildGoodTo = p(24, 32),
+      buildBadTo = p(47, 32),
+      buildActors = [
+        actor("nolan", "blue", row.role, buildNolan, 7, "Nolan"),
+        actor("blue1", "blue", "Center defender", buildCarrier, 4),
+        actor("blue2", "blue", "Fullback", buildTarget, 3),
+        actor("blueGK", "blue", "Goalkeeper", p(8, 32), 1, undefined, true),
+        actor("red1", "red", "Striker", p(49, 32), 9),
+        actor("red2", "red", "Attacking midfielder", p(45, 45), 10),
+        actor("redGK", "red", "Goalkeeper", p(92, 32), 1, undefined, true),
+      ];
+    return {
+      defending: false,
+      nolan: buildNolan,
+      carrier: buildCarrier,
+      target: buildTarget,
+      goodTo: buildGoodTo,
+      badTo: buildBadTo,
+      activeArea: {
+        x: 14,
+        y: 10,
+        width: 43,
+        height: 40,
+        label: "build-out triangle",
+      },
+      actors: completeMatch(buildActors, index),
+    };
+  }
   if (
     family === "receive" ||
     family === "hold" ||
@@ -2155,6 +2259,18 @@ function dutyGoodAnimation(
     { nolan, carrier, goodTo, target } = l,
     far = p(Math.min(88, target.x + 7), target.y),
     goal = p(97, 32);
+  if (row.id === "DM-07")
+    return [
+      // Tom first drops into the split. This is a short, controlled movement
+      // away from pressure—not a run toward Blue's goal.
+      step(0, 1200, "run", "nolan", nolan, goodTo),
+      step(350, 1000, "defend", "red1", undefined, p(42, 32)),
+      step(900, 850, "pass", "blue1", carrier, goodTo),
+      step(1650, 500, "receive", "nolan", goodTo, goodTo),
+      step(2100, 900, "pass", "nolan", goodTo, target),
+      step(2900, 500, "receive", "blue2", target, target),
+      step(3350, 900, "dribble", "blue2", target, p(61, 16)),
+    ];
   if (family === "gk-organize")
     return [
       step(0, 700, "scan", "nolan", nolan, nolan),
@@ -2437,6 +2553,18 @@ function dutyPoorAnimation(
   const family = dutyFamily(row),
     { nolan, carrier, badTo, target } = l,
     blueGoal = p(3, 32);
+  if (row.id === "DM-07")
+    return [
+      // Staying high puts Tom behind the striker's press; the centre-back's
+      // direct pass is intercepted before Blue can turn upfield.
+      step(0, 1100, "run", "nolan", nolan, badTo),
+      step(450, 1000, "pass", "blue1", carrier, badTo),
+      step(1150, 650, "block", "red1", p(49, 32), badTo),
+      step(1800, 900, "dribble", "red1", badTo, p(34, 26)),
+      step(2550, 700, "pass", "red1", p(34, 26), p(18, 38)),
+      step(3200, 650, "shoot", "red2", p(18, 38), blueGoal),
+      step(3900, 500, "react", "nolan", undefined, undefined, "worried"),
+    ];
   if (family.startsWith("gk-")) {
     if (family === "gk-distribute")
       return [
@@ -3201,7 +3329,7 @@ function makeScene(row: InventoryRow, index: number): AnimatedScenario {
   ) => {
     const semantic = ensurePhoneReadableSteps(
       label,
-      enforceOptionResult(label, quality, l, raw),
+      establishTomPossession(l, enforceOptionResult(label, quality, l, raw)),
       l,
     );
     const reactions = [
@@ -3409,6 +3537,18 @@ function makeScene(row: InventoryRow, index: number): AnimatedScenario {
   poorSteps = repairTacticalTrajectory(tacticalScene, poorSteps);
   if (alternateSteps)
     alternateSteps = repairTacticalTrajectory(tacticalScene, alternateSteps);
+  // The final tactical-direction pass can change a ball endpoint. Re-run the
+  // body-spacing repair afterwards so a late consequence never leaves Tom
+  // hidden behind an opponent in the frame the child sees.
+  goodSteps = repairAnimationGeometry(l.actors, l.carrier, goodSteps, setup);
+  poorSteps = repairAnimationGeometry(l.actors, l.carrier, poorSteps, setup);
+  if (alternateSteps)
+    alternateSteps = repairAnimationGeometry(
+      l.actors,
+      l.carrier,
+      alternateSteps,
+      setup,
+    );
   goodChoice = alignChoicePreview(
     semanticChoice(
       "a",

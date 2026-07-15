@@ -84,4 +84,24 @@ describe("readable player geometry", () => {
     ).toBeGreaterThanOrEqual(8);
     expect(cutback.previewBall!.to.y).not.toBe(blind.previewBall!.to.y);
   });
+
+  it("shows DM-07 dropping into the centre-back split before Blue plays forward", () => {
+    const scene = sceneById("DM-07")!;
+    const tom = scene.actors.find((actor) => actor.id === "nolan")!.start;
+    const drop = scene.choices.find(
+      (choice) => choice.label === "Drop Between Center Backs",
+    )!;
+    const dropMove = drop.previewAnimation.find(
+      (step) => step.actorId === "nolan" && step.to,
+    )!;
+    const best = scene.results.find((result) => result.choiceId === "a")!;
+    const forwardPass = best.animationSteps.find(
+      (step) => step.actorId === "nolan" && step.action === "pass",
+    )!;
+
+    expect(dropMove.to!.x).toBeLessThan(tom.x - 10);
+    expect(forwardPass.from!.x).toBeLessThan(30);
+    expect(forwardPass.to!.x).toBeGreaterThan(45);
+    expect(hardFailures(scene)).toEqual([]);
+  });
 });
