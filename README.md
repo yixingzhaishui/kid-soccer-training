@@ -24,7 +24,7 @@ Every scenario is mapped to an observable child skill, a visible match cue, a ro
 
 - three-to-five-second setup animations before choices;
 - two or three animated visual choices;
-- large option previews that show the real ball or player trajectory, destination, teammates, and opponents;
+- large option previews that animate the active role along the first movement path where the choices actually differ;
 - distinct consequence timelines and child-friendly feedback;
 - cartoon human players and a large animated ball;
 - complete 7-v-7 children’s match formations (one goalkeeper and six field players per team) with role-correct nearby teammates and opponents;
@@ -36,6 +36,7 @@ Every scenario is mapped to an observable child skill, a visible match cue, a ro
 - a saved player-name setting used on the field and in coaching, with **Tom** as the default;
 - saved strategy scoring: 3 points for the best choice, 2 for another safe choice, and 1 for a learning choice, capped at 3 per story;
 - press-and-hold Parent Mode with progress by role and coaching concepts;
+- a transparent 100-point case-quality audit in Parent Mode; the build fails when any scenario scores 96 or below;
 - responsive phone and landscape layouts with reduced-motion support;
 - an enlarged 1120-pixel match field with near-edge-to-edge phone rendering;
 - no backend, login, database, paid API, Canvas, or game engine.
