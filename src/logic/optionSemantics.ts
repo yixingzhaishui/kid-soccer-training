@@ -4,10 +4,10 @@ export type OptionIntent='hold'|'active-hold'|'closed-receive'|'orient'|'travel'
 const hold=/stand|watch|wait high|stay on line|stay central|hold position|celebrate early|complain|receive without scanning/i;
 const travel=/\b(?:run|sprint|move|recover|track|arrive|slide|drop|step|press)\b|come short|go wide|close down|attack (?:near|far|back)|get goal-side|^(?:overlap|underlap)$/i;
 const orient=/scan|half turn|back foot|open (?:body|safe side)|body angle|body shape|show outside|set and narrow|turn through|read the pressure|read defender/i;
-const ball=/^(?:pass|play|switch|cross|cut|shoot|finish|clear|roll|throw|lay|recycle|release)|distribution/i;
+const ball=/^(?:pass|play|switch|cross|cut|shoot|finish|clear|roll|throw|lay|recycle|release|push|parry|tip)|distribution/i;
 const defend=/block|cover|screen|delay|mark|protect|guide|intercept|tackle|jockey|goal-side/i;
 export const movementActions=new Set<Action>(['run','walk','turn','dribble','defend','scan','press','shield','set','dive']);
-export const kickActions=new Set<Action>(['pass','cross','shoot','clear']);
+export const kickActions=new Set<Action>(['pass','cross','shoot','clear','parry']);
 
 export function optionIntent(label:string):OptionIntent{if(/pass and (?:continue|run)/i.test(label))return'ball-travel';if(/pass and (?:stop|wait)/i.test(label))return'ball-hold';if(/hold position|stay and protect/i.test(label))return'active-hold';if(/receive without scanning/i.test(label))return'closed-receive';if(hold.test(label))return'hold';if(orient.test(label))return'orient';if(travel.test(label))return'travel';if(ball.test(label))return'ball';if(defend.test(label))return'defend';return'other'}
 export const pointDistance=(a:Point,b:Point)=>Math.hypot(a.x-b.x,a.y-b.y);

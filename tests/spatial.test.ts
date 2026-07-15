@@ -4,6 +4,11 @@ import {applyAnimationStep,finalFrame} from '../src/logic/timeline';
 import {hardFailures,visuallyOccludes} from '../src/logic/spatialQuality';
 
 describe('readable player geometry',()=>{
+  it('passes the child-visible phone audit for every option in all 250 cases',()=>{
+    const failures=animatedScenarios.flatMap((scene)=>hardFailures(scene).map((failure)=>`${scene.id}: ${failure.code}: ${failure.message}`));
+    expect(failures).toEqual([]);
+  });
+
   it('keeps player bodies separate at the decision pause and consequence freeze frames',()=>{
     const failures=animatedScenarios.flatMap((scene)=>hardFailures(scene).filter((failure)=>failure.code==='PLAYER_OCCLUSION').map((failure)=>`${scene.id}: ${failure.message}`));
     expect(failures).toEqual([]);

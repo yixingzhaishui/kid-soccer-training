@@ -50,11 +50,20 @@ export function repairAnimationGeometry(actors:AnimatedActor[],ballStart:Point,s
     repaired.push(item);frame=applyAnimationStep(frame,item);
   }
   const end=Math.max(0,...repaired.map((item)=>item.startTime+item.duration));
+  // Recompute the actual rendered freeze frame. Several reactions can overlap
+  // in time, so the incremental bookkeeping above is not always the same as
+  // the timeline order seen by the child.
+  const renderedFreeze=[...repaired].sort((a,b)=>a.startTime-b.startTime).reduce(applyAnimationStep,prior.length?finalFrame(actors,ballStart,prior):initialFrame(actors,ballStart));
+  for(const [id,state] of Object.entries(renderedFreeze.actors))positions[id]={...state.position};
   // Freeze frames must remain readable. Move the lower-priority figure away;
   // never move Tom merely to make a collision disappear.
   for(let pass=0;pass<80;pass++){
     let pair:[AnimatedActor,AnimatedActor]|undefined;
-    outer:for(let i=0;i<actors.length;i++)for(let j=i+1;j<actors.length;j++)if(visuallyOccludes(actors[i],positions[actors[i].id],actors[j],positions[actors[j].id])){pair=[actors[i],actors[j]];break outer}
+    outer:for(let i=0;i<actors.length;i++)for(let j=i+1;j<actors.length;j++)if(visuallyOccludes(actors[i],positions[actors[i].id],actors[j],positions[actors[j].id])){
+      const bothBackground=actors[i].id.startsWith('support-')&&actors[j].id.startsWith('support-');
+      if(bothBackground&&Math.hypot(positions[actors[i].id].x-positions[actors[j].id].x,positions[actors[i].id].y-positions[actors[j].id].y)>3)continue;
+      pair=[actors[i],actors[j]];break outer
+    }
     if(!pair)break;
     const[a,b]=pair;let movable=a.id==='nolan'?b:b.id==='nolan'?a:a.id.startsWith('support-')&&!b.id.startsWith('support-')?a:b.id.startsWith('support-')&&!a.id.startsWith('support-')?b:a.goalkeeper&&!b.goalkeeper?b:b.goalkeeper&&!a.goalkeeper?a:b;
     const destination=freePoint(positions[movable.id],movable,actors.filter((candidate)=>candidate.id!==movable.id),positions);

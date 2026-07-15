@@ -3,7 +3,7 @@ import {applyAnimationStep,finalFrame,type SceneFrame} from './timeline';
 import {blockedBestChoicePaths} from './trajectory';
 import {optionIntent} from './optionSemantics';
 
-export type HardFailure={code:'PLAYER_OCCLUSION'|'RECEIVER_BLOCKED'|'OPTIONS_LOOK_SAME'|'OPTION_PREVIEW_MISMATCH'|'BALL_PATH_BLOCKED';message:string};
+export type HardFailure={code:'PLAYER_OCCLUSION'|'RECEIVER_BLOCKED'|'OPTIONS_LOOK_SAME'|'OPTION_ROUTE_TOO_SHORT'|'OPTION_PREVIEW_MISMATCH'|'BALL_PATH_BLOCKED';message:string};
 
 const distance=(a:Point,b:Point)=>Math.hypot(a.x-b.x,a.y-b.y);
 const isSupport=(actor:AnimatedActor)=>actor.id.startsWith('support-');
@@ -39,6 +39,24 @@ export function choicesLookSame(a:AnimatedChoice,b:AnimatedChoice){
   return endpointGap<8&&routeGap<32&&ballGap<8&&!actionDifferent&&Math.abs(aTravel-bTravel)<5;
 }
 
+// A 390px phone renders each two-choice SVG at about 1.1 CSS pixels per
+// normalized field unit. These thresholds judge what a child sees, rather
+// than accepting tiny coordinate differences that disappear on the card.
+export const phoneOptionScale={pixelsPerUnit:1,minVisibleTravelPx:16,minEndpointGapPx:22,minAngleGap:45} as const;
+const {pixelsPerUnit:phonePixelsPerUnit,minVisibleTravelPx,minEndpointGapPx,minAngleGap}=phoneOptionScale;
+const visualTravel=(choice:AnimatedChoice)=>{const move=movement(choice),from=move?.from,to=move?.to;return from&&to?distance(from,to)*phonePixelsPerUnit:0};
+const ballTravel=(choice:AnimatedChoice)=>choice.previewBall?distance(choice.previewBall.from,choice.previewBall.to)*phonePixelsPerUnit:0;
+export function visuallySameOnPhone(a:AnimatedChoice,b:AnimatedChoice){
+  const am=movement(a),bm=movement(b),aTravel=visualTravel(a),bTravel=visualTravel(b),aMoves=aTravel>=minVisibleTravelPx,bMoves=bTravel>=minVisibleTravelPx;
+  if(aMoves!==bMoves)return false;
+  if(aMoves&&bMoves){const endpointGap=am?.to&&bm?.to?distance(am.to,bm.to)*phonePixelsPerUnit:0;if(endpointGap>=minEndpointGapPx||angleGap(angle(am),angle(bm))>=minAngleGap)return false}
+  const aBall=ballTravel(a)>=minVisibleTravelPx,bBall=ballTravel(b)>=minVisibleTravelPx;
+  if(aBall!==bBall)return false;
+  if(aBall&&bBall){const endpointGap=a.previewBall&&b.previewBall?distance(a.previewBall.to,b.previewBall.to)*phonePixelsPerUnit:0;const aAngle=a.previewBall?Math.atan2(a.previewBall.to.y-a.previewBall.from.y,a.previewBall.to.x-a.previewBall.from.x):0,bAngle=b.previewBall?Math.atan2(b.previewBall.to.y-b.previewBall.from.y,b.previewBall.to.x-b.previewBall.from.x):0;if(endpointGap>=minEndpointGapPx||angleGap(aAngle,bAngle)>=minAngleGap)return false}
+  const facingGap=a.previewFacing&&b.previewFacing?Math.abs(a.previewFacing.to-b.previewFacing.to):a.previewFacing||b.previewFacing?90:0;
+  return facingGap<45;
+}
+
 function blockedReceivers(scene:AnimatedScenario,setup:SceneFrame,result:AnimatedScenario['results'][number]){
   const failures:HardFailure[]=[];let frame=setup;
   const ordered=[...result.animationSteps].sort((a,b)=>a.startTime-b.startTime);
@@ -64,7 +82,8 @@ function blockedReceivers(scene:AnimatedScenario,setup:SceneFrame,result:Animate
 
 export function hardFailures(scene:AnimatedScenario):HardFailure[]{
   const setup=finalFrame(scene.actors,scene.ballStart,scene.setupAnimation),failures=frameOcclusions(scene,setup,'decision pause');
-  for(let i=0;i<scene.choices.length;i++)for(let j=i+1;j<scene.choices.length;j++)if(choicesLookSame(scene.choices[i],scene.choices[j]))failures.push({code:'OPTIONS_LOOK_SAME',message:`${scene.choices[i].label} and ${scene.choices[j].label} show the same route`});
+  for(const choice of scene.choices){const intent=optionIntent(choice.label),travel=visualTravel(choice),ball=ballTravel(choice);if(['travel','ball-travel'].includes(intent)&&travel<minVisibleTravelPx)failures.push({code:'OPTION_ROUTE_TOO_SHORT',message:`${choice.id}: ${choice.label} moves only ${Math.round(travel)}px on a phone`});if(['ball','ball-travel','ball-hold'].includes(intent)&&ball<minVisibleTravelPx)failures.push({code:'OPTION_ROUTE_TOO_SHORT',message:`${choice.id}: ${choice.label} ball path is only ${Math.round(ball)}px on a phone`})}
+  for(let i=0;i<scene.choices.length;i++)for(let j=i+1;j<scene.choices.length;j++)if(visuallySameOnPhone(scene.choices[i],scene.choices[j]))failures.push({code:'OPTIONS_LOOK_SAME',message:`${scene.choices[i].label} and ${scene.choices[j].label} look the same at phone size`});
   for(const choice of scene.choices){const intent=optionIntent(choice.label);if(['hold','active-hold','closed-receive','orient','ball-hold'].includes(intent))continue;const result=scene.results.find((item)=>item.choiceId===choice.id),consequenceMove=result?.animationSteps.find((step)=>step.actorId==='nolan'&&step.from&&step.to&&['run','walk','dribble','defend','press','shield'].includes(step.action)&&distance(step.from,step.to)>=4),preview=movement(choice);if(consequenceMove&&(!preview?.to||distance(preview.to,consequenceMove.to!)>6))failures.push({code:'OPTION_PREVIEW_MISMATCH',message:`${choice.id}: ${choice.label} preview does not show Tom's consequence route`})}
   for(const result of scene.results){
     const resultFrame=[...result.animationSteps].sort((a,b)=>a.startTime-b.startTime).reduce(applyAnimationStep,setup);
