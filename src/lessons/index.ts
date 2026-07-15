@@ -23,6 +23,7 @@ import {
   spreadActorStarts,
 } from "../logic/geometryRepair";
 import { visuallyOccludes, visuallySameOnPhone } from "../logic/spatialQuality";
+import { repairTacticalTrajectory } from "../logic/tacticalQuality";
 
 type InventoryRow = {
   id: string;
@@ -3325,6 +3326,70 @@ function makeScene(row: InventoryRow, index: number): AnimatedScenario {
       l,
     );
   }
+  // Last match-logic pass: every shot must travel toward the opponent goal.
+  // Passing lanes and receiver visibility remain guarded by the spatial audit.
+  const tacticalScene = {
+    actors: l.actors,
+    ballStart: l.carrier,
+    setupAnimation: setup,
+  };
+  goodSteps = repairTacticalTrajectory(tacticalScene, goodSteps);
+  poorSteps = repairTacticalTrajectory(tacticalScene, poorSteps);
+  if (alternateSteps)
+    alternateSteps = repairTacticalTrajectory(tacticalScene, alternateSteps);
+  goodChoice = alignChoicePreview(
+    semanticChoice(
+      "a",
+      meta.goodLabel,
+      neutralChoiceIcon(meta.goodLabel),
+      "good",
+      l,
+      goodSteps,
+      poorSteps,
+    ),
+    goodSteps,
+    l,
+  );
+  poorChoice = alignChoicePreview(
+    semanticChoice(
+      "c",
+      meta.poorLabel,
+      neutralChoiceIcon(meta.poorLabel),
+      "poor",
+      l,
+      poorSteps,
+      goodSteps,
+    ),
+    poorSteps,
+    l,
+  );
+  if (alternateSteps && alternateLabel)
+    alternateChoice = alignChoicePreview(
+      semanticChoice(
+        "b",
+        alternateLabel,
+        neutralChoiceIcon(alternateLabel),
+        "good",
+        l,
+        alternateSteps,
+        goodSteps,
+      ),
+      alternateSteps,
+      l,
+    );
+  ({ choice: goodChoice, steps: goodSteps } = synchronizeReadableChoice(
+    goodChoice,
+    goodSteps,
+    l,
+  ));
+  ({ choice: poorChoice, steps: poorSteps } = synchronizeReadableChoice(
+    poorChoice,
+    poorSteps,
+    l,
+  ));
+  if (alternateChoice && alternateSteps)
+    ({ choice: alternateChoice, steps: alternateSteps } =
+      synchronizeReadableChoice(alternateChoice, alternateSteps, l));
   goodChoice = {
     ...goodChoice,
     predictionLabel: predictionLabel(row, "good", l.defending),
