@@ -538,14 +538,16 @@ function dutyFamily(row: InventoryRow): DutyFamily {
     if (/cross|corner|aerial|punch|claim/.test(text)) return "gk-cross";
     return "gk-shot";
   }
+  // A post-corner counter can mention a corner, but the named teaching action
+  // is still delay/jockey — not set-piece defending.
+  if (/delay|slow|manage|protect a lead|hold position/.test(text))
+    return "delay";
   if (/corner|free kick|throw-in|set piece|aerial|header/.test(text))
     return "set-piece";
   if (/press|clearance lane|win it back|counterpress|turnover/.test(text))
     return "press";
   if (/track|cover|screen|recover|protect the cutback|defend|mark/.test(text))
     return "cover";
-  if (/delay|slow|manage|protect a lead|hold position/.test(text))
-    return "delay";
   if (/cross|cut back|cutback|end line/.test(text)) return "cross";
   if (/finish|shoot|shot|rebound|loose box|penalty spot/.test(text))
     return "finish";
@@ -2192,6 +2194,60 @@ function dutyGoodAnimation(
       step(2700, 600, "celebrate", "blue1", undefined, undefined, "happy"),
     ];
   if (l.defending) {
+    if (family === "delay") {
+      // Delay is not a clearance or a forward pass. Nolan gets goal-side of
+      // the counter, makes the carrier slow down and turn wide, while the two
+      // blue recovery runners get back behind the ball.
+      const jockey = p(carrier.x - 6, carrier.y + (index % 2 ? 3 : -3));
+      const wideTurn = p(
+        carrier.x + 2,
+        Math.max(10, Math.min(54, carrier.y + (index % 2 ? 12 : -12))),
+      );
+      return [
+        step(0, 1300, "defend", "nolan", nolan, jockey),
+        step(
+          150,
+          1650,
+          "dribble",
+          "redBall",
+          carrier,
+          p(carrier.x - 4, carrier.y),
+        ),
+        step(
+          500,
+          1800,
+          "run",
+          "blue1",
+          undefined,
+          p(carrier.x - 10, carrier.y + 9),
+        ),
+        step(
+          900,
+          1800,
+          "run",
+          "blue2",
+          undefined,
+          p(carrier.x - 11, carrier.y - 9),
+        ),
+        step(
+          1850,
+          900,
+          "turn",
+          "redBall",
+          p(carrier.x - 4, carrier.y),
+          wideTurn,
+        ),
+        step(
+          2900,
+          700,
+          "defend",
+          "nolan",
+          jockey,
+          p(carrier.x - 3, wideTurn.y),
+        ),
+        step(3500, 500, "celebrate", "nolan", undefined, undefined, "happy"),
+      ];
+    }
     if (family === "press")
       return [
         step(0, 1100, "press", "nolan", nolan, goodTo),

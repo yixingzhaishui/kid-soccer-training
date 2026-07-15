@@ -50,6 +50,9 @@ export const kickActions = new Set<Action>([
 export function optionIntent(label: string): OptionIntent {
   if (/pass and (?:continue|run)/i.test(label)) return "ball-travel";
   if (/pass and (?:stop|wait)/i.test(label)) return "ball-hold";
+  // "Jockey and wait" means stay goal-side while moving with the attacker.
+  // It is a defending action, not a stationary watching choice.
+  if (/jockey|delay the (?:counter|attack)/i.test(label)) return "defend";
   if (/hold position|stay and protect/i.test(label)) return "active-hold";
   if (/receive without scanning/i.test(label)) return "closed-receive";
   if (hold.test(label)) return "hold";
