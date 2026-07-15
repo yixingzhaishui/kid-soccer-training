@@ -1,5 +1,6 @@
 import type { AnimatedScenario,Point } from '../types/soccer';
 import { blockedBestChoicePaths } from './trajectory';
+import { semanticIssues } from './optionSemantics';
 import { timelineDuration } from './timeline';
 
 export type QualityCriterion={id:string;label:string;maximum:number;earned:number;detail:string};
@@ -13,7 +14,7 @@ export function scoreScenario(scene:AnimatedScenario):ScenarioQuality{
   const blue=scene.actors.filter((actor)=>actor.team==='blue'),red=scene.actors.filter((actor)=>actor.team==='red'),nolan=scene.actors.find((actor)=>actor.id==='nolan');
   const points=[scene.ballStart,...scene.actors.map((actor)=>actor.start),...scene.setupAnimation.flatMap((step)=>[step.from,step.to].filter(Boolean) as Point[]),...scene.results.flatMap((result)=>result.animationSteps.flatMap((step)=>[step.from,step.to].filter(Boolean) as Point[]))];
   const shotsCorrect=scene.results.every((result)=>result.animationSteps.filter((step)=>step.action==='shoot'&&step.actorId&&step.to).every((shot)=>{const shooter=scene.actors.find((actor)=>actor.id===shot.actorId),keeper=scene.actors.find((actor)=>actor.goalkeeper&&actor.team!==shooter?.team);return Boolean(shooter&&keeper&&Math.abs(shot.to!.x-keeper.start.x)<=8)}));
-  const previewSignatures=scene.choices.map((choice)=>{const move=choice.previewAnimation.find((step)=>step.actorId==='nolan'&&step.to);return `${move?.action}:${Math.round((move?.from?.x??nolan?.start.x??0)/3)},${Math.round((move?.from?.y??nolan?.start.y??0)/3)}>${Math.round((move?.to?.x??0)/3)},${Math.round((move?.to?.y??0)/3)}`});
+  const previewSignatures=scene.choices.map((choice)=>{const move=choice.previewAnimation.find((step)=>step.actorId==='nolan'&&step.to),ball=choice.previewBall,facing=choice.previewFacing;return `${move?.action}:${Math.round((move?.from?.x??nolan?.start.x??0)/3)},${Math.round((move?.from?.y??nolan?.start.y??0)/3)}>${Math.round((move?.to?.x??0)/3)},${Math.round((move?.to?.y??0)/3)}|f:${facing?.from??''}>${facing?.to??''}|b:${ball?`${Math.round(ball.from.x/3)},${Math.round(ball.from.y/3)}>${Math.round(ball.to.x/3)},${Math.round(ball.to.y/3)}`:''}`});
   const resultSignatures=scene.results.map((result)=>JSON.stringify(result.animationSteps.filter((step)=>!step.actorId?.startsWith('support-')).map((step)=>[step.actorId,step.action,step.to&&Math.round(step.to.x/3),step.to&&Math.round(step.to.y/3)])));
   const everyResult=(test:(result:AnimatedScenario['results'][number])=>boolean)=>scene.results.every(test);
   const criteria:QualityCriterion[]=[
@@ -26,7 +27,7 @@ export function scoreScenario(scene:AnimatedScenario):ScenarioQuality{
     award('trajectory','Safe ball geometry',[scene.results.filter((result)=>result.quality!=='poor').every((result)=>blockedBestChoicePaths(scene,result).length===0),shotsCorrect],10,'Helpful kicks avoid opponent bodies and every shot attacks the correct goal.'),
     award('feedback','Child-readable feedback',[everyResult((result)=>result.narration.length>15),everyResult((result)=>result.explanation.length>8),everyResult((result)=>result.teamEffect.length>15),new Set(scene.results.map((result)=>result.narration)).size===scene.results.length],4,'Feedback identifies what happened and how it affected the team.'),
   ];
-  return{sceneId:scene.id,score:criteria.reduce((sum,item)=>sum+item.earned,0),criteria};
+  const rawScore=criteria.reduce((sum,item)=>sum+item.earned,0),semantic=semanticIssues(scene);return{sceneId:scene.id,score:semantic.length?Math.min(96,rawScore):rawScore,criteria};
 }
 
 export const scoreCurriculum=(scenes:AnimatedScenario[])=>scenes.map(scoreScenario);

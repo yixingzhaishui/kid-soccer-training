@@ -15,6 +15,7 @@ export type AnimationStep={
 
 export type AnimatedChoice={
   id:string;label:string;spokenLabel:string;icon:string;previewAnimation:AnimationStep[];
+  previewFacing?:{from:number;to:number};previewBall?:{from:Point;to:Point;action:Action};
 };
 
 export type ChoiceResult={
