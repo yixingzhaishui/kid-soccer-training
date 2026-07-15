@@ -37,14 +37,16 @@ Every scenario is mapped to an observable child skill, a visible match cue, a ro
 - a saved player-name setting used on the field and in coaching, with **Tom** as the default;
 - saved strategy scoring: 3 points for the best choice, 2 for another safe choice, and 1 for a learning choice, capped at 3 per story;
 - press-and-hold Parent Mode with progress by role and coaching concepts;
-- a transparent 100-point case-quality audit in Parent Mode; semantic contradictions cap a case at 96 and fail the build;
+- a transparent option-centered 100-point design audit in Parent Mode with exact per-case failure reasons;
 - responsive phone and landscape layouts with reduced-motion support;
 - an enlarged 1120-pixel match field with near-edge-to-edge phone rendering;
 - no backend, login, database, paid API, Canvas, or game engine.
 
 Scenario content comes from `SCENARIO_INVENTORY.md`; animation metadata and choreography are in `src/lessons/index.ts`. Shared React components and the SVG timeline engine render every scene without role-specific answers in the UI.
 
-Automated curriculum checks verify complete 7-v-7 teams, role-specific nearby players, normalized coordinates, Nolan inside the highlighted decision area, concrete strategy alternatives, distinct consequences, moving opposition, and shots directed only toward the opponent goal. A geometry audit also rejects every best-choice pass, cross, clearance, or shot whose trajectory intersects an opponent body before its destination.
+Automated curriculum checks verify complete 7-v-7 teams, role-specific nearby players, normalized coordinates, Tom inside the highlighted decision area, concrete strategy alternatives, distinct consequences, moving opposition, and shots directed only toward the opponent goal. The design audit totals 100 points: match integrity 10, role-specific teaching 10, readable setup 10, option tactical meaning 15, visible option-path contrast 15, option consequence accuracy 20, active teammates/opponents 8, safe ball geometry 8, and child feedback 4. Hidden players, unreachable receivers, look-alike option routes, label/action contradictions, or blocked helpful ball paths are hard failures and cap a case at 95 until repaired.
+
+The geometry repair keeps active bodies visually separated at decision and freeze frames, places a receiving player on the ball side of a nearby marker, moves markers goal-side instead of on top of the receiver, and reopens helpful passing and shooting lanes after team movement. SVG players are painted in field-depth order so a farther player cannot incorrectly cover a nearer player.
 
 ## Install and run
 
@@ -83,6 +85,6 @@ npm run preview
 
 ## Completion status
 
-Implemented: 30 playable scenarios for each of the eight positional roles, plus 10 teamwork stories; 61 mapped child skills; animated active opponents; trajectory and goal-direction validation; scoring, saved progress, Parent Mode, speech, replay, re-choose, and side-by-side comparison. The automated suite currently contains 21 curriculum/unit tests and 27 browser tests across desktop Chromium, phone-sized Chromium, and phone-sized WebKit.
+Implemented: 30 playable scenarios for each of the eight positional roles, plus 10 teamwork stories; 61 mapped child skills; animated active opponents; option-centered design scoring with a visible score for every individual option; receiver, body-occlusion, trajectory, and goal-direction validation; scoring, saved progress, Parent Mode, speech, replay, re-choose, and side-by-side comparison. The automated suite currently contains 32 curriculum/unit tests and 33 browser tests across desktop Chromium, phone-sized Chromium, and phone-sized WebKit.
 
 Remaining: the 250-story curriculum is data-driven and passes the automated football-consistency gates, but it has not been independently certified by a licensed youth coach. That human coaching review is the only outstanding curriculum-validation step; it is not represented as complete here.
