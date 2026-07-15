@@ -32,6 +32,7 @@ Every scenario is mapped to an observable child skill, a visible match cue, a ro
 - a highlighted active-play area showing where the current decision matters;
 - clearly labeled blue and red goals with opponent-goal shot validation;
 - immediate “Choose again,” replay, side-by-side comparison, speech synthesis, and saved local progress;
+- a saved player-name setting used on the field and in coaching, with **Tom** as the default;
 - saved strategy scoring: 3 points for the best choice, 2 for another safe choice, and 1 for a learning choice, capped at 3 per story;
 - press-and-hold Parent Mode with progress by role and coaching concepts;
 - responsive phone and landscape layouts with reduced-motion support;

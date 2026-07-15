@@ -35,4 +35,4 @@ export type ScenePack={
 
 export type SceneProgress={completed:boolean;plays:number;best:number;good:number;poor:number;score:number;lastChoiceId?:string};
 export type Progress={sceneResults:Record<string,SceneProgress>;lastSceneId?:string};
-export type Settings={speechEnabled:boolean;reducedMotion:boolean};
+export type Settings={speechEnabled:boolean;reducedMotion:boolean;childName:string};
