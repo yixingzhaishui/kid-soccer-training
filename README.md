@@ -24,6 +24,7 @@ Every scenario is mapped to an observable child skill, a visible match cue, a ro
 
 - three-to-five-second setup animations before choices;
 - two or three animated visual choices;
+- large option previews that show the real ball or player trajectory, destination, teammates, and opponents;
 - distinct consequence timelines and child-friendly feedback;
 - cartoon human players and a large animated ball;
 - complete 7-v-7 children’s match formations (one goalkeeper and six field players per team) with role-correct nearby teammates and opponents;
@@ -36,6 +37,7 @@ Every scenario is mapped to an observable child skill, a visible match cue, a ro
 - saved strategy scoring: 3 points for the best choice, 2 for another safe choice, and 1 for a learning choice, capped at 3 per story;
 - press-and-hold Parent Mode with progress by role and coaching concepts;
 - responsive phone and landscape layouts with reduced-motion support;
+- an enlarged 1120-pixel match field with near-edge-to-edge phone rendering;
 - no backend, login, database, paid API, Canvas, or game engine.
 
 Scenario content comes from `SCENARIO_INVENTORY.md`; animation metadata and choreography are in `src/lessons/index.ts`. Shared React components and the SVG timeline engine render every scene without role-specific answers in the UI.
