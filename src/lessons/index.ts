@@ -1,14 +1,48 @@
-import inventoryMarkdown from '../../SCENARIO_INVENTORY.md?raw';
-import type {ActiveArea,AnimatedActor,AnimatedChoice,AnimatedScenario,AnimationStep,ChoiceResult,Point,SceneCategory,ScenePack,SceneStage} from '../types/soccer';
-import {applyAnimationStep,finalFrame} from '../logic/timeline';
-import {kickActions,movementActions,optionIntent,pointDistance} from '../logic/optionSemantics';
-import {repairAnimationGeometry,spreadActorStarts} from '../logic/geometryRepair';
-import {visuallyOccludes,visuallySameOnPhone} from '../logic/spatialQuality';
+import inventoryMarkdown from "../../SCENARIO_INVENTORY.md?raw";
+import type {
+  ActiveArea,
+  AnimatedActor,
+  AnimatedChoice,
+  AnimatedScenario,
+  AnimationStep,
+  ChoiceResult,
+  Point,
+  SceneCategory,
+  ScenePack,
+  SceneStage,
+} from "../types/soccer";
+import { applyAnimationStep, finalFrame } from "../logic/timeline";
+import {
+  kickActions,
+  movementActions,
+  optionIntent,
+  pointDistance,
+} from "../logic/optionSemantics";
+import {
+  repairAnimationGeometry,
+  spreadActorStarts,
+} from "../logic/geometryRepair";
+import { visuallyOccludes, visuallySameOnPhone } from "../logic/spatialQuality";
 
-type InventoryRow={id:string;role:string;trigger:string;decision:string;good:string;poor:string;location:string;assets:string};
-type Meta={title:string;goodLabel:string;poorLabel:string;icon:string};
+type InventoryRow = {
+  id: string;
+  role: string;
+  trigger: string;
+  decision: string;
+  good: string;
+  poor: string;
+  location: string;
+  assets: string;
+};
+type Meta = {
+  title: string;
+  goodLabel: string;
+  poorLabel: string;
+  icon: string;
+};
 
-const metadata:Record<string,Meta>=Object.fromEntries(`
+const metadata: Record<string, Meta> = Object.fromEntries(
+  `
 WNG-01|Stay Wide|Stay wide|Crowd the ball|↔
 WNG-02|Read the Fullback|Attack open side|Run at cover|🧭
 WNG-03|Cross Early|Cross now|Keep dribbling|🥅
@@ -73,343 +107,3352 @@ TW-06|Attack a 2v1|Wait then pass|Pass too early|2️⃣
 TW-07|Defend a 2v1|Delay and protect|Dive in|🛡️
 TW-08|Pressure Cover Balance|Take three jobs|All chase|⚖️
 TW-09|Three-Lane Counter|Fill three lanes|Bunch central|⚡
-TW-10|Protect the Lead|Shield or recycle|Cross blindly|🔒`.trim().split('\n').map((line)=>{const[id,title,goodLabel,poorLabel,icon]=line.split('|');return[id,{title,goodLabel,poorLabel,icon}]}));
+TW-10|Protect the Lead|Shield or recycle|Cross blindly|🔒`
+    .trim()
+    .split("\n")
+    .map((line) => {
+      const [id, title, goodLabel, poorLabel, icon] = line.split("|");
+      return [id, { title, goodLabel, poorLabel, icon }];
+    }),
+);
 
-const baseRows:InventoryRow[]=inventoryMarkdown.split('## Duplicate-concept review')[0].split('\n').filter((line)=>/^\| (WNG-|STR-|CM-|AM-|DM-|FB-|CB-|GK-|TW-)\d\d /.test(line)).map((line)=>{const cells=line.split('|').slice(1,-1).map((cell)=>cell.trim());return{id:cells[0],role:cells[1],trigger:cells[2],decision:cells[3],good:cells[4],poor:cells[5],location:cells[6],assets:cells[7]}});
+const baseRows: InventoryRow[] = inventoryMarkdown
+  .split("## Duplicate-concept review")[0]
+  .split("\n")
+  .filter((line) =>
+    /^\| (WNG-|STR-|CM-|AM-|DM-|FB-|CB-|GK-|TW-)\d\d /.test(line),
+  )
+  .map((line) => {
+    const cells = line
+      .split("|")
+      .slice(1, -1)
+      .map((cell) => cell.trim());
+    return {
+      id: cells[0],
+      role: cells[1],
+      trigger: cells[2],
+      decision: cells[3],
+      good: cells[4],
+      poor: cells[5],
+      location: cells[6],
+      assets: cells[7],
+    };
+  });
 
-type ExpansionConfig={prefix:string;role:string;core:number;topics:string[]};
-const expansionConfigs:ExpansionConfig[]=[
-  {prefix:'WNG',role:'Winger',core:8,topics:['First Touch Down Line','Receive on the Back Foot','Protect Near Touchline','Use the Overlap Decoy','Combine With an Underlap','Cross Low Behind Defense','Clip the Far-Post Cross','Delay Until Support Arrives','Attack an Isolated Center Back','Rotate With Number Ten','Change Wings After Recycle','D:Press the Opposing Fullback','D:Block the Clearance Lane','D:Defend the Back Post','D:Recover Through the Inside Lane','Become the Corner-Kick Outlet','Carry the Counter to Commit','Release the Overlapping Fullback','Protect a Lead by the Corner','Attack a Tired Defender','Escape a Double Team','Win and Use the Throw-In']},
-  {prefix:'STR',role:'Striker',core:8,topics:['Move on the Blind Side','Pin the Center Defender','Spin Off the Shoulder','Dummy the Near-Post Cross','Finish the Pullback','Choose One Touch or Control','Chip the Rushing Goalkeeper','Finish With the Weak Foot','Time the Header','Attack the Cutback Zone','Clear Space for a Teammate','Drag a Center Back Wide','Bounce Pass Under Contact','Shield and Win the Foul','D:Press the Goalkeeper','D:Jump on a Back-Pass Trigger','D:Screen the Holding Midfielder','D:Defend the Near Post at a Corner','Become the Counterattack Outlet','Secure a Direct Clearance','Attack the Second Cross','React to a Loose Box Ball']},
-  {prefix:'CM',role:'Central midfielder',core:8,topics:['Receive Behind the First Press','Carry Through an Open Midfield','Draw Pressure Before Passing','Play Around the Corner','Find the Opposite Fullback','Recycle Through the Center Back','Change the Passing Angle','Support a Wide Overload','Balance an Attacking Triangle','Play Into the Striker Feet','Follow the Pass Into Space','Disguise the Forward Pass','D:Protect the Center After Turnover','D:Track an Opposing Number Eight','D:Double the Wide Ball','D:Collect the Second Ball','D:Stop the Cutback Runner','D:Screen the Counter Pass','Manage the Final Minute','Speed Up Against a Backpedaling Line','Offer Behind a Trapped Winger','Arrive for the Recycled Cross']},
-  {prefix:'AM',role:'Attacking midfielder',core:6,topics:['Receive on the Half Turn','Drift Away From the Holding Midfielder','Find the Weak-Side Pocket','Slip a Reverse Pass','Play the Wide Runner Through','Disguise the Striker Pass','Carry at the Back Four','Commit a Defender Then Release','Create the Box Overload','Attack the Penalty Spot Late','Combine With the Overlap','Use the Underlapping Runner','Recycle a Blocked Attack','Shoot After a Layoff','Follow a Saved Shot','D:Press the Opponent Pivot','D:Trap the Fullback After Turnover','D:Recover Goal-Side of Number Six','D:Block the First Counter Pass','D:Compete for the Second Ball','Protect Possession Near the Box','Draw a Foul Between Lines','Switch to the Opposite Winger','Create Space With a Decoy Run']},
-  {prefix:'DM',role:'Defensive midfielder',core:6,topics:['Drop Between Center Backs','Show for the Goalkeeper','Turn Away From the First Presser','Switch From the Base','Break Pressure With a Bounce Pass','Carry Into the Free Lane','Hold Position During Both Overlaps','Cover the Center Back Who Steps','D:Screen the Number Ten','D:Close the Top of the Box','D:Protect the Cutback Zone','D:Win the Second Ball','D:Track the Late Midfield Runner','D:Shift Behind the Press','D:Cover the Opposite Half-Space','D:Delay a Wide Counter','D:Stop the Central Counter','D:Defend the Box Edge','D:Organize the Midfield Line','D:Choose When to Tackle','Recycle While Protecting a Lead','Find the Advanced Eight','Support Behind a Risky Pass','Become the Safe Throw-In Option']},
-  {prefix:'FB',role:'Fullback',core:6,topics:['Receive From the Goalkeeper','Break the First Press Wide','Play Inside Then Move','Switch Through the Back Line','Cross From Deep','Cut Back From the End Line','Support Without Overlapping','Create a Wide Two Against One','Invert Into Midfield','Recognize the Winger Rotation','D:Delay the Fast Winger','D:Stop the Inside Cut','D:Track the Overlap','D:Defend the Back-Post Cross','D:Protect the Cutback','D:Cover the Center Back','D:Win the Far-Post Header','D:Step With the Defensive Line','D:Recover After a Set Piece','D:Clear the Loose Wide Ball','Manage a One-Goal Lead','Become the Counter Outlet','Underlap After a Switch','Recycle When the Cross Is Blocked']},
-  {prefix:'CB',role:'Center defender',core:6,topics:['Play Through the Open Fullback','Carry Into Midfield','Break a Line With a Pass','Switch to the Weak Side','Find the Defensive Midfielder','Use the Goalkeeper to Escape','D:Defend a Direct Long Ball','D:Win the First Header','D:Collect the Second Ball','D:Track a Channel Run','D:Pass On a Crossing Runner','D:Defend the Near-Post Cross','D:Defend the Cutback Zone','D:Block the Edge-of-Box Shot','D:Delay the Central Counter','D:Cover Behind the Fullback','D:Stay Compact With the Partner','D:Step Into an Interception','D:Drop When the Passer Looks Up','D:Clear Behind for a Corner','Organize the Line at a Free Kick','Protect Possession Under Pressure','Choose the Safe Throw-In','Manage the Last Attack']},
-  {prefix:'GK',role:'Goalkeeper',core:7,topics:['Set for a Near-Post Shot','Set for a Far-Post Shot','Hold a Clean Low Shot','Tip a High Shot Over','Smother at the Striker Feet','Spread in a One Against One','Sweep Outside the Box','Clear a Back Pass Under Pressure','Pass Through the First Line','Clip the Ball to the Fullback','Throw a Fast Counterattack','Slow Distribution to Protect a Lead','Switch Distribution After a Press','Call the Defensive Line Up','Organize a Wide Free Kick','Build the Corner-Kick Wall','Claim a Near-Post Corner','Punch Through Crowded Traffic','Stay for an Outswinging Cross','Come for an Inswinging Cross','Recover to the Goal Line','Cover the Fullback Back Pass','Manage the Final Aerial Ball']},
+type ExpansionConfig = {
+  prefix: string;
+  role: string;
+  core: number;
+  topics: string[];
+};
+const expansionConfigs: ExpansionConfig[] = [
+  {
+    prefix: "WNG",
+    role: "Winger",
+    core: 8,
+    topics: [
+      "First Touch Down Line",
+      "Receive on the Back Foot",
+      "Protect Near Touchline",
+      "Use the Overlap Decoy",
+      "Combine With an Underlap",
+      "Cross Low Behind Defense",
+      "Clip the Far-Post Cross",
+      "Delay Until Support Arrives",
+      "Attack an Isolated Center Back",
+      "Rotate With Number Ten",
+      "Change Wings After Recycle",
+      "D:Press the Opposing Fullback",
+      "D:Block the Clearance Lane",
+      "D:Defend the Back Post",
+      "D:Recover Through the Inside Lane",
+      "Become the Corner-Kick Outlet",
+      "Carry the Counter to Commit",
+      "Release the Overlapping Fullback",
+      "Protect a Lead by the Corner",
+      "Attack a Tired Defender",
+      "Escape a Double Team",
+      "Win and Use the Throw-In",
+    ],
+  },
+  {
+    prefix: "STR",
+    role: "Striker",
+    core: 8,
+    topics: [
+      "Move on the Blind Side",
+      "Pin the Center Defender",
+      "Spin Off the Shoulder",
+      "Dummy the Near-Post Cross",
+      "Finish the Pullback",
+      "Choose One Touch or Control",
+      "Chip the Rushing Goalkeeper",
+      "Finish With the Weak Foot",
+      "Time the Header",
+      "Attack the Cutback Zone",
+      "Clear Space for a Teammate",
+      "Drag a Center Back Wide",
+      "Bounce Pass Under Contact",
+      "Shield and Win the Foul",
+      "D:Press the Goalkeeper",
+      "D:Jump on a Back-Pass Trigger",
+      "D:Screen the Holding Midfielder",
+      "D:Defend the Near Post at a Corner",
+      "Become the Counterattack Outlet",
+      "Secure a Direct Clearance",
+      "Attack the Second Cross",
+      "React to a Loose Box Ball",
+    ],
+  },
+  {
+    prefix: "CM",
+    role: "Central midfielder",
+    core: 8,
+    topics: [
+      "Receive Behind the First Press",
+      "Carry Through an Open Midfield",
+      "Draw Pressure Before Passing",
+      "Play Around the Corner",
+      "Find the Opposite Fullback",
+      "Recycle Through the Center Back",
+      "Change the Passing Angle",
+      "Support a Wide Overload",
+      "Balance an Attacking Triangle",
+      "Play Into the Striker Feet",
+      "Follow the Pass Into Space",
+      "Disguise the Forward Pass",
+      "D:Protect the Center After Turnover",
+      "D:Track an Opposing Number Eight",
+      "D:Double the Wide Ball",
+      "D:Collect the Second Ball",
+      "D:Stop the Cutback Runner",
+      "D:Screen the Counter Pass",
+      "Manage the Final Minute",
+      "Speed Up Against a Backpedaling Line",
+      "Offer Behind a Trapped Winger",
+      "Arrive for the Recycled Cross",
+    ],
+  },
+  {
+    prefix: "AM",
+    role: "Attacking midfielder",
+    core: 6,
+    topics: [
+      "Receive on the Half Turn",
+      "Drift Away From the Holding Midfielder",
+      "Find the Weak-Side Pocket",
+      "Slip a Reverse Pass",
+      "Play the Wide Runner Through",
+      "Disguise the Striker Pass",
+      "Carry at the Back Four",
+      "Commit a Defender Then Release",
+      "Create the Box Overload",
+      "Attack the Penalty Spot Late",
+      "Combine With the Overlap",
+      "Use the Underlapping Runner",
+      "Recycle a Blocked Attack",
+      "Shoot After a Layoff",
+      "Follow a Saved Shot",
+      "D:Press the Opponent Pivot",
+      "D:Trap the Fullback After Turnover",
+      "D:Recover Goal-Side of Number Six",
+      "D:Block the First Counter Pass",
+      "D:Compete for the Second Ball",
+      "Protect Possession Near the Box",
+      "Draw a Foul Between Lines",
+      "Switch to the Opposite Winger",
+      "Create Space With a Decoy Run",
+    ],
+  },
+  {
+    prefix: "DM",
+    role: "Defensive midfielder",
+    core: 6,
+    topics: [
+      "Drop Between Center Backs",
+      "Show for the Goalkeeper",
+      "Turn Away From the First Presser",
+      "Switch From the Base",
+      "Break Pressure With a Bounce Pass",
+      "Carry Into the Free Lane",
+      "Hold Position During Both Overlaps",
+      "Cover the Center Back Who Steps",
+      "D:Screen the Number Ten",
+      "D:Close the Top of the Box",
+      "D:Protect the Cutback Zone",
+      "D:Win the Second Ball",
+      "D:Track the Late Midfield Runner",
+      "D:Shift Behind the Press",
+      "D:Cover the Opposite Half-Space",
+      "D:Delay a Wide Counter",
+      "D:Stop the Central Counter",
+      "D:Defend the Box Edge",
+      "D:Organize the Midfield Line",
+      "D:Choose When to Tackle",
+      "Recycle While Protecting a Lead",
+      "Find the Advanced Eight",
+      "Support Behind a Risky Pass",
+      "Become the Safe Throw-In Option",
+    ],
+  },
+  {
+    prefix: "FB",
+    role: "Fullback",
+    core: 6,
+    topics: [
+      "Receive From the Goalkeeper",
+      "Break the First Press Wide",
+      "Play Inside Then Move",
+      "Switch Through the Back Line",
+      "Cross From Deep",
+      "Cut Back From the End Line",
+      "Support Without Overlapping",
+      "Create a Wide Two Against One",
+      "Invert Into Midfield",
+      "Recognize the Winger Rotation",
+      "D:Delay the Fast Winger",
+      "D:Stop the Inside Cut",
+      "D:Track the Overlap",
+      "D:Defend the Back-Post Cross",
+      "D:Protect the Cutback",
+      "D:Cover the Center Back",
+      "D:Win the Far-Post Header",
+      "D:Step With the Defensive Line",
+      "D:Recover After a Set Piece",
+      "D:Clear the Loose Wide Ball",
+      "Manage a One-Goal Lead",
+      "Become the Counter Outlet",
+      "Underlap After a Switch",
+      "Recycle When the Cross Is Blocked",
+    ],
+  },
+  {
+    prefix: "CB",
+    role: "Center defender",
+    core: 6,
+    topics: [
+      "Play Through the Open Fullback",
+      "Carry Into Midfield",
+      "Break a Line With a Pass",
+      "Switch to the Weak Side",
+      "Find the Defensive Midfielder",
+      "Use the Goalkeeper to Escape",
+      "D:Defend a Direct Long Ball",
+      "D:Win the First Header",
+      "D:Collect the Second Ball",
+      "D:Track a Channel Run",
+      "D:Pass On a Crossing Runner",
+      "D:Defend the Near-Post Cross",
+      "D:Defend the Cutback Zone",
+      "D:Block the Edge-of-Box Shot",
+      "D:Delay the Central Counter",
+      "D:Cover Behind the Fullback",
+      "D:Stay Compact With the Partner",
+      "D:Step Into an Interception",
+      "D:Drop When the Passer Looks Up",
+      "D:Clear Behind for a Corner",
+      "Organize the Line at a Free Kick",
+      "Protect Possession Under Pressure",
+      "Choose the Safe Throw-In",
+      "Manage the Last Attack",
+    ],
+  },
+  {
+    prefix: "GK",
+    role: "Goalkeeper",
+    core: 7,
+    topics: [
+      "Set for a Near-Post Shot",
+      "Set for a Far-Post Shot",
+      "Hold a Clean Low Shot",
+      "Tip a High Shot Over",
+      "Smother at the Striker Feet",
+      "Spread in a One Against One",
+      "Sweep Outside the Box",
+      "Clear a Back Pass Under Pressure",
+      "Pass Through the First Line",
+      "Clip the Ball to the Fullback",
+      "Throw a Fast Counterattack",
+      "Slow Distribution to Protect a Lead",
+      "Switch Distribution After a Press",
+      "Call the Defensive Line Up",
+      "Organize a Wide Free Kick",
+      "Build the Corner-Kick Wall",
+      "Claim a Near-Post Corner",
+      "Punch Through Crowded Traffic",
+      "Stay for an Outswinging Cross",
+      "Come for an Inswinging Cross",
+      "Recover to the Goal Line",
+      "Cover the Fullback Back Pass",
+      "Manage the Final Aerial Ball",
+    ],
+  },
 ];
-const goodConsequences=['Blue breaks the next line and attacks facing forward.','Nolan creates a clear teammate chance.','The team keeps the ball and gains field position.','The opponent is forced away from the dangerous space.','Blue reaches the next action before the defense resets.','Nolan’s movement opens two useful passing lanes.','The ball reaches a teammate in space.','Blue controls the moment and keeps team shape.'];
-const poorConsequences=['The passing window closes and blue must retreat.','The opponent reaches the dangerous space first.','Two blue players become trapped in one lane.','The rushed action gives the opponent a fast counter.','A free opponent receives behind Nolan.','The ball runs out and the attack ends.','The defense resets before blue can use the opening.','Nolan arrives late and the teammate is left alone.'];
-const locationByRole:Record<string,string>={WNG:'Wide channel',STR:'Central final third',CM:'Middle third',AM:'Between lines',DM:'Space before defense',FB:'Wide defensive and attacking lane',CB:'Central defensive third',GK:'Penalty area'};
-function matchTrigger(title:string,location:string,defensive:boolean){
-  const action=title.toLowerCase(),place=location.toLowerCase();
-  if(/corner|free kick|wall/.test(action))return `${defensive?'Red':'Blue'} has a set piece near ${place}; Nolan checks the ball, the goal, and every runner before ${action}.`;
-  if(/cross|cutback|far-post|near-post|header|aerial/.test(action))return `The ball moves into a wide crossing position while attackers and defenders race into ${place}; Nolan must read ${action}.`;
-  if(/shot|finish|rebound|saved|loose box|one against one/.test(action))return `A shot can happen in ${place} and the goalkeeper and defenders are still moving; Nolan sees the cue for ${action}.`;
-  if(/press|turnover|counter|back-pass|clearance/.test(action))return `Possession changes suddenly in ${place}; both teams sprint to reset and Nolan must decide how to ${action}.`;
-  if(/receive|turn|first touch|back foot|under pressure/.test(action))return `A pass travels toward Nolan in ${place} as an opponent closes from the blind side; the match problem is ${action}.`;
-  if(/run|overlap|underlap|track|recover|rotate|move|drift/.test(action))return `A teammate and an opponent make opposite runs through ${place}; Nolan must time ${action} without breaking the team shape.`;
-  if(/switch|opposite|weak side|recycle|distribution|pass/.test(action))return `The near side of ${place} becomes crowded while space opens across the field; Nolan reads when to ${action}.`;
-  return `${defensive?'Red attacks':'Blue builds'} through ${place} as nearby teammates and opponents change lanes; Nolan recognizes the moment to ${action}.`;
+const goodConsequences = [
+  "Blue breaks the next line and attacks facing forward.",
+  "Nolan creates a clear teammate chance.",
+  "The team keeps the ball and gains field position.",
+  "The opponent is forced away from the dangerous space.",
+  "Blue reaches the next action before the defense resets.",
+  "Nolan’s movement opens two useful passing lanes.",
+  "The ball reaches a teammate in space.",
+  "Blue controls the moment and keeps team shape.",
+];
+const poorConsequences = [
+  "The passing window closes and blue must retreat.",
+  "The opponent reaches the dangerous space first.",
+  "Two blue players become trapped in one lane.",
+  "The rushed action gives the opponent a fast counter.",
+  "A free opponent receives behind Nolan.",
+  "The ball runs out and the attack ends.",
+  "The defense resets before blue can use the opening.",
+  "Nolan arrives late and the teammate is left alone.",
+];
+const locationByRole: Record<string, string> = {
+  WNG: "Wide channel",
+  STR: "Central final third",
+  CM: "Middle third",
+  AM: "Between lines",
+  DM: "Space before defense",
+  FB: "Wide defensive and attacking lane",
+  CB: "Central defensive third",
+  GK: "Penalty area",
+};
+function matchTrigger(title: string, location: string, defensive: boolean) {
+  const action = title.toLowerCase(),
+    place = location.toLowerCase();
+  if (/corner|free kick|wall/.test(action))
+    return `${defensive ? "Red" : "Blue"} has a set piece near ${place}; Nolan checks the ball, the goal, and every runner before ${action}.`;
+  if (/cross|cutback|far-post|near-post|header|aerial/.test(action))
+    return `The ball moves into a wide crossing position while attackers and defenders race into ${place}; Nolan must read ${action}.`;
+  if (/shot|finish|rebound|saved|loose box|one against one/.test(action))
+    return `A shot can happen in ${place} and the goalkeeper and defenders are still moving; Nolan sees the cue for ${action}.`;
+  if (/press|turnover|counter|back-pass|clearance/.test(action))
+    return `Possession changes suddenly in ${place}; both teams sprint to reset and Nolan must decide how to ${action}.`;
+  if (/receive|turn|first touch|back foot|under pressure/.test(action))
+    return `A pass travels toward Nolan in ${place} as an opponent closes from the blind side; the match problem is ${action}.`;
+  if (/run|overlap|underlap|track|recover|rotate|move|drift/.test(action))
+    return `A teammate and an opponent make opposite runs through ${place}; Nolan must time ${action} without breaking the team shape.`;
+  if (/switch|opposite|weak side|recycle|distribution|pass/.test(action))
+    return `The near side of ${place} becomes crowded while space opens across the field; Nolan reads when to ${action}.`;
+  return `${defensive ? "Red attacks" : "Blue builds"} through ${place} as nearby teammates and opponents change lanes; Nolan recognizes the moment to ${action}.`;
 }
-function poorChoiceLabel(title:string,defensive:boolean){
-  const action=title.toLowerCase();
-  if(/parry|tip/.test(action))return 'Push the ball central';
-  if(/claim|catch|smother|come for/.test(action))return 'Stay on the goal line';
-  if(/clear/.test(action))return 'Play across your own goal';
-  if(/finish|shot|shoot|header|rebound|loose box/.test(action))return 'Wait for one more touch';
-  if(/switch|opposite|weak.side|recycle/.test(action))return 'Keep playing into traffic';
-  if(/press|close|step|jump on/.test(action))return 'Wait and press too late';
-  if(/track|cover|screen|recover|defend|protect.*zone/.test(action))return 'Chase only the ball';
-  if(/cross|cut back|cutback/.test(action))return 'Keep dribbling into pressure';
-  if(/overlap|underlap|run|move|rotate|drift|arrive/.test(action))return 'Stand and watch the play';
-  if(/receive|turn|first touch|back foot/.test(action))return 'Receive without scanning';
-  if(/delay|slow|manage|protect a lead|hold position/.test(action))return 'Rush forward immediately';
-  if(/pass|play|find|release|distribution|throw/.test(action))return 'Force the closed passing lane';
-  return defensive?'Leave the dangerous player':'Carry into the crowded space';
+function poorChoiceLabel(title: string, defensive: boolean) {
+  const action = title.toLowerCase();
+  if (/parry|tip/.test(action)) return "Push the ball central";
+  if (/claim|catch|smother|come for/.test(action))
+    return "Stay on the goal line";
+  if (/clear/.test(action)) return "Play across your own goal";
+  if (/finish|shot|shoot|header|rebound|loose box/.test(action))
+    return "Wait for one more touch";
+  if (/switch|opposite|weak.side|recycle/.test(action))
+    return "Keep playing into traffic";
+  if (/press|close|step|jump on/.test(action)) return "Wait and press too late";
+  if (/track|cover|screen|recover|defend|protect.*zone/.test(action))
+    return "Chase only the ball";
+  if (/cross|cut back|cutback/.test(action))
+    return "Keep dribbling into pressure";
+  if (/overlap|underlap|run|move|rotate|drift|arrive/.test(action))
+    return "Stand and watch the play";
+  if (/receive|turn|first touch|back foot/.test(action))
+    return "Receive without scanning";
+  if (/delay|slow|manage|protect a lead|hold position/.test(action))
+    return "Rush forward immediately";
+  if (/pass|play|find|release|distribution|throw/.test(action))
+    return "Force the closed passing lane";
+  return defensive
+    ? "Leave the dangerous player"
+    : "Carry into the crowded space";
 }
-const expansionRows:InventoryRow[]=[];
-for(const config of expansionConfigs){config.topics.forEach((raw,offset)=>{const defensive=raw.startsWith('D:'),title=raw.replace(/^D:/,''),location=locationByRole[config.prefix];const number=config.core+offset+1,id=`${config.prefix}-${String(number).padStart(2,'0')}`;metadata[id]={title,goodLabel:title,poorLabel:poorChoiceLabel(title,defensive),icon:defensive?'🛡️':'⚽'};expansionRows.push({id,role:config.role,trigger:matchTrigger(title,location,defensive),decision:title,good:`Nolan reads ${title.toLowerCase()} at the right moment. ${goodConsequences[(number+config.prefix.charCodeAt(0))%goodConsequences.length]}`,poor:`Nolan misses the cue for ${title.toLowerCase()}. ${poorConsequences[(number*2+config.prefix.charCodeAt(1))%poorConsequences.length]}`,location,assets:`${defensive?'defensive ':''}${title.toLowerCase()} movement, ball, teammates, opponents`})})}
-const rows:InventoryRow[]=[...baseRows,...expansionRows];
-const reviewedCoreIds=new Set(baseRows.map((row)=>row.id));
-
-type DutyFamily='cross'|'finish'|'receive'|'combine'|'switch'|'carry'|'hold'|'move'|'press'|'cover'|'delay'|'set-piece'|'build'|'possession'|'gk-shot'|'gk-cross'|'gk-sweep'|'gk-distribute'|'gk-organize';
-function dutyFamily(row:InventoryRow):DutyFamily{const text=`${row.decision} ${row.trigger}`.toLowerCase();if(row.id==='STR-28')return'receive';if(row.id==='AM-10')return'combine';if(row.id.startsWith('GK-')){if(/organize|wall|line up|call/.test(text))return'gk-organize';if(/distribution|pass|throw|back pass|counterattack/.test(text))return'gk-distribute';if(/sweep|striker feet|one against one|outside the box/.test(text))return'gk-sweep';if(/cross|corner|aerial|punch|claim/.test(text))return'gk-cross';return'gk-shot'}if(/corner|free kick|throw-in|set piece|aerial|header/.test(text))return'set-piece';if(/press|clearance lane|win it back|counterpress|turnover/.test(text))return'press';if(/track|cover|screen|recover|protect the cutback|defend|mark/.test(text))return'cover';if(/delay|slow|manage|protect a lead|hold position/.test(text))return'delay';if(/cross|cut back|cutback|end line/.test(text))return'cross';if(/finish|shoot|shot|rebound|loose box|penalty spot/.test(text))return'finish';if(/receive|first touch|back foot|half turn|turn away|scan/.test(text))return'receive';if(/one-two|wall pass|bounce pass|combine|third.player/.test(text))return'combine';if(/switch|opposite|weak side|change wings/.test(text))return'switch';if(/shield|hold up|protect near|secure a direct/.test(text))return'hold';if(/carry|beat|attack an isolated|commit a defender|dribble/.test(text))return'carry';if(/run|move|overlap|underlap|rotate|drift|arrive|outlet/.test(text))return'move';if(/goalkeeper|center back|back line|build|recycle|safe option|show for/.test(text))return'build';return'possession'}
-const dutyLabels:Record<DutyFamily,string>={cross:'create the cross',finish:'finish the chance',receive:'scan and receive',combine:'combine together',switch:'use the open side',carry:'attack with the ball',hold:'protect the ball',move:'make the helpful run',press:'press together',cover:'protect the danger',delay:'slow the attack','set-piece':'set-piece duty',build:'help the build-up',possession:'keep team shape','gk-shot':'protect the goal','gk-cross':'control the cross','gk-sweep':'sweep behind defense','gk-distribute':'start the attack','gk-organize':'organize defenders'};
-function attackingSkillId(row:InventoryRow,text:string){const id=row.id;if(id==='CB-07')return'A15';if(id==='CB-11')return'A07';if(id==='CB-27')return'D12';if(id==='CB-29')return'A06';if(id==='DM-27')return'T05';if(id==='FB-14')return'A06';if(id==='FB-16')return'A05';if(id==='WNG-08')return'T01';if(id==='WNG-12')return'A11';if(id==='STR-14')return'A04';if(id==='STR-20'||id==='CM-15'||id==='AM-15')return'A05';if(id==='CM-13'||id==='CM-14')return'A06';if(id==='CM-19')return'A09';if(id==='AM-08')return'A02';if(id==='AM-10'||id==='AM-12')return'A25';if(id==='AM-19')return'A07';if(id==='AM-27')return'A10';if(id==='AM-29')return'A15';if(/counter.*width|three.lane|counter outlet|carry the counter/.test(text))return'T01';if(/protect(?:ing)? (?:a )?lead|final minute|manage the last/.test(text))return'T05';if(/rest defense|hold position during|know when to hold/.test(text))return'T04';if(/rebound|saved shot|loose box/.test(text))return'A24';if(/shoot or|square|shot lane|edge of the box/.test(text))return'A23';if(/finish|near or far post|penalty spot|header/.test(text))return'A22';if(/back.post run|far.post run/.test(text))return'A21';if(/cutback|cut back|end.line/.test(text))return'A20';if(/cross/.test(text))return'A19';if(/underlap/.test(text))return'A18';if(/overlap/.test(text))return'A17';if(/tempo|slow|speed up/.test(text))return'A16';if(/switch|opposite|weak.side|change wings/.test(text))return'A15';if(/third.player/.test(text))return'A14';if(/one.two|wall pass|bounce pass|combine/.test(text))return'A13';if(/beat|body position|body shape|isolated|tired defender|double team/.test(text))return'A12';if(/carry|commit|draw pressure/.test(text))return'A11';if(/shield|hold up|protect.*ball|protect possession|secure.*clearance/.test(text))return'A10';if(/run behind|blind side|shoulder|stay onside|provide depth|follow the pass/.test(text))return'A09';if(/stay wide|hold width|sprint wide/.test(text))return'A08';if(/support behind|drop between|safe reset|recycle/.test(text))return'A07';if(/support|show for|triangle|outlet|passing angle/.test(text))return'A06';if(/make space|share the space|decoy|clear space|rotate|drag a center back|overload/.test(text))return'A05';if(/first touch|one touch or control/.test(text))return'A04';if(/open body|back foot|half turn/.test(text))return'A03';if(/pocket|between lines|come short|receive behind|trapped winger|drift away/.test(text))return'A02';return'A01'}
-function skillIdFor(row:InventoryRow){const text=`${row.decision} ${row.trigger}`.toLowerCase(),id=row.id,defensive=defensiveIds.has(id)||row.assets.startsWith('defensive');if(!id.startsWith('GK-')&&!defensive)return attackingSkillId(row,text);if(id==='CB-13')return'D13';if(id==='CB-27')return'D12';if(id.startsWith('GK-')){if(/organize|wall|call|line up/.test(text))return'G10';if(/second save|recover|rebound/.test(text))return'G11';if(/punch/.test(text))return'G08';if(/claim|come for.*cross|catch.*cross/.test(text))return'G07';if(/distribution|pass|throw|roll|counterattack/.test(text))return'G09';if(/spread|one against one/.test(text))return'G06';if(/sweep|through ball|outside the box/.test(text))return'G05';if(/smother|striker feet/.test(text))return'G04';if(/parry|tip/.test(text))return'G03';if(/catch|hold a clean/.test(text))return'G02';return'G01'}if(/counterpress|win it back|after turnover/.test(text))return'T03';if(/recover|defensive transition/.test(text))return'T02';if(/protect a lead|final minute|manage the last/.test(text))return'T05';if(/rest defense|hold position during|know when to hold/.test(text))return'T04';if(/squeeze|line up|hold the line|step together/.test(text))return'D12';if(/drop when|step or drop|unpressured/.test(text))return'D13';if(/pass on|exchange mark/.test(text))return'D14';if(/near.post cross/.test(text))return'D15';if(/far.post|back.post cross|track the cross/.test(text))return'D16';if(/cutback zone|cutback runner/.test(text))return'D17';if(/second ball|first header|collect/.test(text))return'D18';if(/clear danger|clear wide|loose wide ball/.test(text))return'D19';if(/when to tackle|tackle timing/.test(text))return'D20';if(/delay.*counter|defend a 2v1/.test(text))return'D11';if(/block.*shot|box edge/.test(text))return'D10';if(/stop the cross|block.*cross|close down early/.test(text))return'D09';if(/show outside|stop the inside cut/.test(text))return'D08';if(/goal.side|stay compact/.test(text))return'D07';if(/track.*runner|track.*overlap|late midfield runner/.test(text))return'D06';if(/screen|block.*lane|protect the center/.test(text))return'D05';if(/balance|opposite half.space|weak side/.test(text))return'D04';if(/cover|slide behind|shift behind/.test(text))return'D03';if(/curve.*press|block one side/.test(text))return'D02';if(/press|close the top|step into/.test(text))return'D01';return'D03'}
-
-const categoryFor=(id:string):SceneCategory=>id.startsWith('WNG')?'winger':id.startsWith('STR')?'striker':id.startsWith('CM')?'central-midfielder':id.startsWith('AM')?'attacking-midfielder':id.startsWith('DM')?'defensive-midfielder':id.startsWith('FB')?'fullback':id.startsWith('CB')?'center-defender':id.startsWith('GK')?'goalkeeper':'teamwork';
-const defensiveIds=new Set(['WNG-07','STR-07','CM-07','AM-06','DM-01','DM-03','DM-04','DM-06','FB-01','FB-02','FB-05','FB-06','CB-01','CB-02','CB-03','CB-04','CB-05','CB-06','CB-13','CB-27','GK-01','GK-02','GK-03','GK-04','GK-05','GK-06','GK-07','TW-07','TW-08']);
-const crossers=new Set(['WNG-03','WNG-04','FB-03','FB-04']);
-const finishers=new Set(['WNG-05','STR-01','STR-03','STR-06','CM-08','AM-05']);
-const passFinishers=new Set(['STR-05','AM-03','TW-06']);
-const alternateLabels:Record<string,string>={'WNG-06':'Come short','STR-05':'Take a safe shot','CM-02':'Play back','AM-05':'Recycle safely','DM-02':'Return first-time','FB-05':'Slide central','CB-04':'Pass wide','GK-04':'Throw wide','TW-02':'Use other corner'};
-const p=(x:number,y:number):Point=>({x,y});
-function focusedDutyArea(row:InventoryRow,fallback:ActiveArea,nolan:Point,carrier:Point,target:Point):ActiveArea{if(reviewedCoreIds.has(row.id))return fallback;const family=dutyFamily(row),wide=['cross','move','gk-cross'].includes(family),large=family==='switch',width=large?62:wide?36:family.startsWith('gk-')?27:32,height=wide?24:family.startsWith('gk-')?34:30;const focusX=family.startsWith('gk-')?8:(nolan.x+carrier.x)/2,focusY=wide?nolan.y:(nolan.y+carrier.y)/2;return{x:Math.max(1,Math.min(99-width,focusX-width/2)),y:Math.max(5,Math.min(59-height,focusY-height/2)),width,height,label:dutyLabels[family]}}
-const step=(startTime:number,duration:number,action:AnimationStep['action'],actorId?:string,from?:Point,to?:Point,emotion?:AnimationStep['emotion']):AnimationStep=>({startTime,duration,action,actorId,from,to,emotion});
-const actor=(id:string,team:'blue'|'red',role:string,start:Point,number:number,name?:string,goalkeeper=false):AnimatedActor=>({id,team,role,start,facing:team==='blue'?0:180,jerseyNumber:number,name,goalkeeper});
-const result=(choiceId:string,quality:ChoiceResult['quality'],narration:string,explanation:string,teamEffect:string,animationSteps:AnimationStep[]):ChoiceResult=>({choiceId,quality,narration,explanation,teamEffect,comparisonLine:quality==='poor'?'The other choice helps the whole team.':'This choice solves the game problem.',animationSteps,freezeFrameTime:Math.max(...animationSteps.map((item)=>item.startTime+item.duration))});
-const choice=(id:string,label:string,icon:string,action:AnimationStep['action'],from:Point,to:Point,previewFacing?:AnimatedChoice['previewFacing'],previewBall?:AnimatedChoice['previewBall']):AnimatedChoice=>({id,label,spokenLabel:label,icon,previewAnimation:[step(0,1100,action,'nolan',from,to)],previewFacing,previewBall});
-function rolePreview(steps:AnimationStep[],start:Point,fallback:Point,comparison:AnimationStep[]=[]){const bodyActions=new Set(['run','walk','turn','dribble','defend','scan','press','shield','set','dive']),motions=steps.filter((item)=>item.actorId==='nolan'&&item.to&&bodyActions.has(item.action)),other=comparison.filter((item)=>item.actorId==='nolan'&&item.to&&bodyActions.has(item.action)),signature=(item:AnimationStep|undefined)=>item?`${item.action}:${item.from?.x},${item.from?.y}>${item.to?.x},${item.to?.y}`:'';const motion=motions.find((item,index)=>signature(item)!==signature(other[index]))??motions[0];return{action:motion?.action??'walk',from:motion?.from??start,to:motion?.to??fallback}}
-function semanticDestination(l:ReturnType<typeof layout>,quality:'good'|'poor'){const preferred=quality==='good'?l.goodTo:l.badTo;if(pointDistance(l.nolan,preferred)>=4)return preferred;const direction=l.defending?-1:1,vertical=l.nolan.y<32?8:-8;return clampPoint(p(l.nolan.x+direction*12,l.nolan.y+vertical))}
-function optionDestination(label:string,l:ReturnType<typeof layout>,quality:'good'|'poor'){
-  const text=label.toLowerCase(),start=l.nolan,vertical=start.y<32?-1:1;
-  if(/drop|play back|recycle|reset|come short|support behind/.test(text))return clampPoint(p(start.x-12,start.y-vertical*5));
-  if(/run away|stay high|watch outside|celebrate early/.test(text))return clampPoint(p(start.x+13,start.y+vertical*9));
-  if(/wide|outside|touchline/.test(text))return clampPoint(p(start.x+5,start.y<32?10:54));
-  if(/central|inside/.test(text))return clampPoint(p(start.x+6,32));
-  if(/back post|far post/.test(text))return clampPoint(p(Math.max(start.x+15,78),start.y<32?51:13));
-  if(/near post|behind|overlap|underlap/.test(text))return clampPoint(p(start.x+15,start.y+vertical*7));
-  if(/press|close|track|get goal-side|recover|cover|slide/.test(text))return clampPoint(l.carrier);
-  return semanticDestination(l,quality);
-}
-function namedKick(label:string):AnimationStep['action']{if(/^cross|^cut/i.test(label))return'cross';if(/^shoot|^finish/i.test(label))return'shoot';if(/^clear/i.test(label))return'clear';if(/^(?:push|parry|tip)/i.test(label))return'parry';return'pass'}
-function enforceOptionResult(label:string,quality:'good'|'poor',l:ReturnType<typeof layout>,raw:AnimationStep[]):AnimationStep[]{const intent=optionIntent(label),start=l.nolan,destination=optionDestination(label,l,quality);if(intent==='closed-receive')return[step(0,800,'pass','blue1',l.carrier,start),step(650,500,'receive','nolan',start,start),step(900,1100,'press','red1',undefined,start),step(1700,600,'block','red1',start,start),step(2200,1000,'dribble','red1',start,p(Math.max(12,start.x-16),Math.max(8,Math.min(56,start.y+8)))),step(3200,500,'react','nolan',undefined,undefined,'worried')];if(intent==='active-hold'){const withoutRole=raw.filter((item)=>item.actorId!=='nolan');return[step(0,700,'scan','nolan',start,start),step(650,1000,'defend','nolan',start,start),...withoutRole,step(3300,500,'celebrate','nolan',undefined,undefined,'happy')]}if(intent==='ball-hold'){const action=namedKick(label),target=quality==='good'?l.target:l.badTo;return[step(0,500,'receive','nolan',start,start),step(500,850,action,'nolan',start,target),step(1300,600,'receive','blue2',target,target),step(1700,900,'press','red1',undefined,target),step(2700,500,'react','nolan',undefined,undefined,quality==='poor'?'worried':'happy'),step(3300,500,'react','blue2',undefined,undefined,quality==='poor'?'worried':'happy')]}if(intent==='ball-travel'){const action=namedKick(label),target=l.target;return[step(0,700,action,'nolan',start,target),step(300,1500,'run','nolan',start,destination),step(900,600,'receive','blue2',target,target),step(1700,700,'pass','blue2',target,destination),step(2500,500,'receive','nolan',destination,destination),step(3200,500,'celebrate','nolan',undefined,undefined,'happy')]}if(intent==='hold'){const withoutRole=raw.filter((item)=>item.actorId!=='nolan');return[step(0,1500,'react','nolan',start,start,quality==='poor'?'worried':undefined),...withoutRole,step(3300,500,'react','nolan',undefined,undefined,quality==='poor'?'worried':'happy')]}if(intent==='orient'){const withoutEarlyWrong=raw.filter((item)=>!(item.actorId==='nolan'&&item.startTime<1000&&movementActions.has(item.action)));return[step(0,550,'scan','nolan',start,start),step(500,650,'turn','nolan',start,p(start.x+(l.defending?-1.5:1.5),start.y)),...withoutEarlyWrong.map((item)=>({...item,startTime:item.startTime+900}))]}if(intent==='travel'){const first=raw.find((item)=>item.actorId==='nolan'&&item.from&&item.to&&movementActions.has(item.action)&&pointDistance(item.from,item.to)>=3.5),old=first?.to;const mapped=raw.map((item)=>{const replace=(point:Point|undefined)=>point&&old&&pointDistance(point,old)<1.5?destination:point;if(item===first)return{...item,from:start,to:destination};const blueFollow=!l.defending&&item.actorId&&l.actors.find((actor)=>actor.id===item.actorId)?.team==='blue';return blueFollow?{...item,from:replace(item.from),to:replace(item.to)}:item});return first?mapped:[step(0,1400,quality==='poor'?'walk':'run','nolan',start,destination),...raw.filter((item)=>item.actorId!=='nolan'||!movementActions.has(item.action)).map((item)=>({...item,startTime:item.startTime+700}))]}if(intent==='ball'){const action=namedKick(label);if(/recycle|play back|return/i.test(label)){const reset=p(Math.min(start.x-8,l.carrier.x),l.carrier.y);return[step(0,500,'receive','nolan',start,start),step(600,850,'pass','nolan',start,reset),step(1400,500,'receive','blue1',reset,reset),step(2000,900,'dribble','blue1',reset,p(Math.max(10,reset.x-8),reset.y+5)),step(3000,500,'celebrate','nolan',undefined,undefined,'happy')]}const hasKick=raw.some((item)=>item.actorId==='nolan'&&kickActions.has(item.action));if(hasKick)return raw;const target=quality==='good'?l.target:l.badTo;return[step(0,700,'receive','nolan',start,start),step(650,900,action,'nolan',start,target),step(1450,700,quality==='good'?'receive':'block',quality==='good'?'blue2':'red1',target,target),...raw.filter((item)=>item.actorId!=='nolan').map((item)=>({...item,startTime:item.startTime+1600}))]}return raw}
-function semanticChoice(id:string,label:string,icon:string,quality:'good'|'poor',l:ReturnType<typeof layout>,steps:AnimationStep[],comparison:AnimationStep[]):AnimatedChoice{const intent=optionIntent(label),start=l.nolan,ordered=[...steps].sort((a,b)=>a.startTime-b.startTime),base=rolePreview(ordered,start,quality==='good'?l.goodTo:l.badTo,comparison);if(intent==='active-hold')return choice(id,label,icon,'scan',start,start,{from:l.defending?0:180,to:l.defending?75:105});if(intent==='ball-hold'){const action=namedKick(label),kick=ordered.find((item)=>item.actorId==='nolan'&&kickActions.has(item.action)&&item.to),target=kick?.to??(quality==='good'?l.target:l.badTo);return choice(id,label,icon,action,start,start,undefined,{from:kick?.from??start,to:target,action})}if(intent==='ball-travel'){const action=namedKick(label),kick=ordered.find((item)=>item.actorId==='nolan'&&kickActions.has(item.action)&&item.to),motion=ordered.find((item)=>item.actorId==='nolan'&&item.to&&rolePathActions.has(item.action)),destination=motion?.to??optionDestination(label,l,quality),target=kick?.to??l.target;return choice(id,label,icon,'run',start,destination,undefined,{from:kick?.from??start,to:target,action})}if(intent==='hold'||intent==='closed-receive')return choice(id,label,icon,intent==='closed-receive'?'receive':'react',start,start,undefined,intent==='closed-receive'?{from:l.carrier,to:start,action:'pass'}:undefined);if(intent==='orient')return choice(id,label,icon,'turn',start,p(start.x+(l.defending?-1.5:1.5),start.y),{from:l.defending?0:180,to:l.defending?90:0},/receive|back foot|half turn/i.test(label)?{from:l.carrier,to:start,action:'pass'}:undefined);if(intent==='travel'){const motion=ordered.find((item)=>item.actorId==='nolan'&&item.to&&rolePathActions.has(item.action));return choice(id,label,icon,quality==='poor'?'walk':'run',start,motion?.to??optionDestination(label,l,quality))}if(intent==='ball'){const action=namedKick(label),kick=ordered.find((item)=>item.actorId==='nolan'&&kickActions.has(item.action)&&item.to),target=kick?.to??(quality==='good'?l.target:l.badTo),approach=ordered.find((item)=>item.actorId==='nolan'&&item.from&&item.to&&movementActions.has(item.action)&&pointDistance(item.from,item.to)>=3.5&&(!kick||item.startTime<=kick.startTime));return choice(id,label,icon,approach?.action??action,start,approach?.to??start,undefined,{from:kick?.from??start,to:target,action})}if(quality==='poor')return choice(id,label,icon,'walk',start,clampPoint(p(start.x-12,start.y+(start.y<32?10:-10))));const facing=['scan','turn','set'].includes(base.action)?{from:l.defending?0:180,to:l.defending?90:0}:undefined;return choice(id,label,icon,base.action,base.from,base.to,facing)}
-function alignChoicePreview(item:AnimatedChoice,steps:AnimationStep[],l:ReturnType<typeof layout>):AnimatedChoice{const intent=optionIntent(item.label);if(['hold','active-hold','closed-receive','orient','ball-hold'].includes(intent))return item;const motion=[...steps].sort((a,b)=>a.startTime-b.startTime).find((candidate)=>candidate.actorId==='nolan'&&candidate.from&&candidate.to&&['run','walk','dribble','defend','press','shield','dive'].includes(candidate.action)&&pointDistance(candidate.from,candidate.to)>=4);return motion?{...item,previewAnimation:[step(0,1100,motion.action,'nolan',l.nolan,motion.to)]}:item}
-const rolePathActions=new Set<AnimationStep['action']>(['run','walk','dribble','defend','press','shield']);
-function readableDestination(start:Point,to:Point,minDistance=18){
-  const dx=to.x-start.x,dy=to.y-start.y,length=Math.hypot(dx,dy);
-  if(length>=minDistance)return to;
-  const ux=length>1?dx/length:1,uy=length>1?dy/length:(start.y<32?1:-1);
-  let destination=clampPoint(p(start.x+ux*minDistance,start.y+uy*minDistance));
-  if(pointDistance(start,destination)>=minDistance-1)return destination;
-  const vertical=start.y<32?1:-1;
-  destination=clampPoint(p(start.x+ux*Math.min(12,minDistance),start.y+vertical*minDistance));
-  return destination;
-}
-function remapEndpoint(steps:AnimationStep[],old:Point,destination:Point,actors:AnimatedActor[]){
-  const replace=(point:Point|undefined)=>point&&pointDistance(point,old)<1.5?destination:point;
-  return steps.map((item)=>{
-    const team=item.actorId?actors.find((actor)=>actor.id===item.actorId)?.team:undefined;
-    return team==='blue'||item.actorId==='nolan'?{...item,from:replace(item.from),to:replace(item.to)}:item;
+const expansionRows: InventoryRow[] = [];
+for (const config of expansionConfigs) {
+  config.topics.forEach((raw, offset) => {
+    const defensive = raw.startsWith("D:"),
+      title = raw.replace(/^D:/, ""),
+      location = locationByRole[config.prefix];
+    const number = config.core + offset + 1,
+      id = `${config.prefix}-${String(number).padStart(2, "0")}`,
+      action = title.toLowerCase(),
+      goodOpeners = [
+        `Nolan spots the cue early and chooses when to ${action}.`,
+        `Good scan: Nolan sees the space for ${action} before it closes.`,
+        `Nolan checks the moving players, then decides to ${action}.`,
+      ],
+      poorOpeners = [
+        `Nolan reacts after the opening for ${action} has closed.`,
+        `Nolan watches the ball but misses the moving-player cue for ${action}.`,
+        `The first option disappears before Nolan tries to ${action}.`,
+      ];
+    metadata[id] = {
+      title,
+      goodLabel: title,
+      poorLabel: poorChoiceLabel(title, defensive),
+      icon: defensive ? "🛡️" : "⚽",
+    };
+    expansionRows.push({
+      id,
+      role: config.role,
+      trigger: matchTrigger(title, location, defensive),
+      decision: title,
+      good: `${goodOpeners[number % goodOpeners.length]} ${goodConsequences[(number + config.prefix.charCodeAt(0)) % goodConsequences.length]}`,
+      poor: `${poorOpeners[number % poorOpeners.length]} ${poorConsequences[(number * 2 + config.prefix.charCodeAt(1)) % poorConsequences.length]}`,
+      location,
+      assets: `${defensive ? "defensive " : ""}${title.toLowerCase()} movement, ball, teammates, opponents`,
+    });
   });
 }
-function ensurePhoneReadableSteps(label:string,steps:AnimationStep[],l:ReturnType<typeof layout>){
-  const intent=optionIntent(label);
-  let repaired=steps;
-  if(!['hold','active-hold','closed-receive','orient','ball-hold'].includes(intent)){
-    const first=[...repaired].sort((a,b)=>a.startTime-b.startTime).find((item)=>item.actorId==='nolan'&&item.from&&item.to&&rolePathActions.has(item.action)&&pointDistance(item.from,item.to)>1.5);
-    if(first?.to){const old=first.to,destination=readableDestination(l.nolan,old),firstIndex=repaired.indexOf(first);repaired=remapEndpoint(repaired,old,destination,l.actors).map((item,index)=>index===firstIndex?{...item,from:l.nolan,to:destination}:item)}
+const rows: InventoryRow[] = [...baseRows, ...expansionRows];
+const reviewedCoreIds = new Set(baseRows.map((row) => row.id));
+
+type DutyFamily =
+  | "cross"
+  | "finish"
+  | "receive"
+  | "combine"
+  | "switch"
+  | "carry"
+  | "hold"
+  | "move"
+  | "press"
+  | "cover"
+  | "delay"
+  | "set-piece"
+  | "build"
+  | "possession"
+  | "gk-shot"
+  | "gk-cross"
+  | "gk-sweep"
+  | "gk-distribute"
+  | "gk-organize";
+function dutyFamily(row: InventoryRow): DutyFamily {
+  const text = `${row.decision} ${row.trigger}`.toLowerCase();
+  if (row.id === "STR-28") return "receive";
+  if (row.id === "AM-10") return "combine";
+  if (row.id.startsWith("GK-")) {
+    if (/organize|wall|line up|call/.test(text)) return "gk-organize";
+    if (/distribution|pass|throw|back pass|counterattack/.test(text))
+      return "gk-distribute";
+    if (/sweep|striker feet|one against one|outside the box/.test(text))
+      return "gk-sweep";
+    if (/cross|corner|aerial|punch|claim/.test(text)) return "gk-cross";
+    return "gk-shot";
   }
-  if(['ball','ball-travel','ball-hold'].includes(intent)){
-    const kick=repaired.find((item)=>item.actorId==='nolan'&&item.from&&item.to&&kickActions.has(item.action));
-    if(kick?.from&&kick.to&&pointDistance(kick.from,kick.to)<18){const old=kick.to,destination=readableDestination(kick.from,old,20),kickIndex=repaired.indexOf(kick);repaired=remapEndpoint(repaired,old,destination,l.actors).map((item,index)=>index===kickIndex?{...item,to:destination}:item)}
+  if (/corner|free kick|throw-in|set piece|aerial|header/.test(text))
+    return "set-piece";
+  if (/press|clearance lane|win it back|counterpress|turnover/.test(text))
+    return "press";
+  if (/track|cover|screen|recover|protect the cutback|defend|mark/.test(text))
+    return "cover";
+  if (/delay|slow|manage|protect a lead|hold position/.test(text))
+    return "delay";
+  if (/cross|cut back|cutback|end line/.test(text)) return "cross";
+  if (/finish|shoot|shot|rebound|loose box|penalty spot/.test(text))
+    return "finish";
+  if (/receive|first touch|back foot|half turn|turn away|scan/.test(text))
+    return "receive";
+  if (/one-two|wall pass|bounce pass|combine|third.player/.test(text))
+    return "combine";
+  if (/switch|opposite|weak side|change wings/.test(text)) return "switch";
+  if (/shield|hold up|protect near|secure a direct/.test(text)) return "hold";
+  if (/carry|beat|attack an isolated|commit a defender|dribble/.test(text))
+    return "carry";
+  if (/run|move|overlap|underlap|rotate|drift|arrive|outlet/.test(text))
+    return "move";
+  if (
+    /goalkeeper|center back|back line|build|recycle|safe option|show for/.test(
+      text,
+    )
+  )
+    return "build";
+  return "possession";
+}
+const dutyLabels: Record<DutyFamily, string> = {
+  cross: "create the cross",
+  finish: "finish the chance",
+  receive: "scan and receive",
+  combine: "combine together",
+  switch: "use the open side",
+  carry: "attack with the ball",
+  hold: "protect the ball",
+  move: "make the helpful run",
+  press: "press together",
+  cover: "protect the danger",
+  delay: "slow the attack",
+  "set-piece": "set-piece duty",
+  build: "help the build-up",
+  possession: "keep team shape",
+  "gk-shot": "protect the goal",
+  "gk-cross": "control the cross",
+  "gk-sweep": "sweep behind defense",
+  "gk-distribute": "start the attack",
+  "gk-organize": "organize defenders",
+};
+function attackingSkillId(row: InventoryRow, text: string) {
+  const id = row.id;
+  if (id === "CB-07") return "A15";
+  if (id === "CB-11") return "A07";
+  if (id === "CB-27") return "D12";
+  if (id === "CB-29") return "A06";
+  if (id === "DM-27") return "T05";
+  if (id === "FB-14") return "A06";
+  if (id === "FB-16") return "A05";
+  if (id === "WNG-08") return "T01";
+  if (id === "WNG-12") return "A11";
+  if (id === "STR-14") return "A04";
+  if (id === "STR-20" || id === "CM-15" || id === "AM-15") return "A05";
+  if (id === "CM-13" || id === "CM-14") return "A06";
+  if (id === "CM-19") return "A09";
+  if (id === "AM-08") return "A02";
+  if (id === "AM-10" || id === "AM-12") return "A25";
+  if (id === "AM-19") return "A07";
+  if (id === "AM-27") return "A10";
+  if (id === "AM-29") return "A15";
+  if (/counter.*width|three.lane|counter outlet|carry the counter/.test(text))
+    return "T01";
+  if (/protect(?:ing)? (?:a )?lead|final minute|manage the last/.test(text))
+    return "T05";
+  if (/rest defense|hold position during|know when to hold/.test(text))
+    return "T04";
+  if (/rebound|saved shot|loose box/.test(text)) return "A24";
+  if (/shoot or|square|shot lane|edge of the box/.test(text)) return "A23";
+  if (/finish|near or far post|penalty spot|header/.test(text)) return "A22";
+  if (/back.post run|far.post run/.test(text)) return "A21";
+  if (/cutback|cut back|end.line/.test(text)) return "A20";
+  if (/cross/.test(text)) return "A19";
+  if (/underlap/.test(text)) return "A18";
+  if (/overlap/.test(text)) return "A17";
+  if (/tempo|slow|speed up/.test(text)) return "A16";
+  if (/switch|opposite|weak.side|change wings/.test(text)) return "A15";
+  if (/third.player/.test(text)) return "A14";
+  if (/one.two|wall pass|bounce pass|combine/.test(text)) return "A13";
+  if (
+    /beat|body position|body shape|isolated|tired defender|double team/.test(
+      text,
+    )
+  )
+    return "A12";
+  if (/carry|commit|draw pressure/.test(text)) return "A11";
+  if (
+    /shield|hold up|protect.*ball|protect possession|secure.*clearance/.test(
+      text,
+    )
+  )
+    return "A10";
+  if (
+    /run behind|blind side|shoulder|stay onside|provide depth|follow the pass/.test(
+      text,
+    )
+  )
+    return "A09";
+  if (/stay wide|hold width|sprint wide/.test(text)) return "A08";
+  if (/support behind|drop between|safe reset|recycle/.test(text)) return "A07";
+  if (/support|show for|triangle|outlet|passing angle/.test(text)) return "A06";
+  if (
+    /make space|share the space|decoy|clear space|rotate|drag a center back|overload/.test(
+      text,
+    )
+  )
+    return "A05";
+  if (/first touch|one touch or control/.test(text)) return "A04";
+  if (/open body|back foot|half turn/.test(text)) return "A03";
+  if (
+    /pocket|between lines|come short|receive behind|trapped winger|drift away/.test(
+      text,
+    )
+  )
+    return "A02";
+  return "A01";
+}
+function skillIdFor(row: InventoryRow) {
+  const text = `${row.decision} ${row.trigger}`.toLowerCase(),
+    id = row.id,
+    defensive = defensiveIds.has(id) || row.assets.startsWith("defensive");
+  if (!id.startsWith("GK-") && !defensive) return attackingSkillId(row, text);
+  if (id === "CB-13") return "D13";
+  if (id === "CB-27") return "D12";
+  if (id.startsWith("GK-")) {
+    if (/organize|wall|call|line up/.test(text)) return "G10";
+    if (/second save|recover|rebound/.test(text)) return "G11";
+    if (/punch/.test(text)) return "G08";
+    if (/claim|come for.*cross|catch.*cross/.test(text)) return "G07";
+    if (/distribution|pass|throw|roll|counterattack/.test(text)) return "G09";
+    if (/spread|one against one/.test(text)) return "G06";
+    if (/sweep|through ball|outside the box/.test(text)) return "G05";
+    if (/smother|striker feet/.test(text)) return "G04";
+    if (/parry|tip/.test(text)) return "G03";
+    if (/catch|hold a clean/.test(text)) return "G02";
+    return "G01";
+  }
+  if (/counterpress|win it back|after turnover/.test(text)) return "T03";
+  if (/recover|defensive transition/.test(text)) return "T02";
+  if (/protect a lead|final minute|manage the last/.test(text)) return "T05";
+  if (/rest defense|hold position during|know when to hold/.test(text))
+    return "T04";
+  if (/squeeze|line up|hold the line|step together/.test(text)) return "D12";
+  if (/drop when|step or drop|unpressured/.test(text)) return "D13";
+  if (/pass on|exchange mark/.test(text)) return "D14";
+  if (/near.post cross/.test(text)) return "D15";
+  if (/far.post|back.post cross|track the cross/.test(text)) return "D16";
+  if (/cutback zone|cutback runner/.test(text)) return "D17";
+  if (/second ball|first header|collect/.test(text)) return "D18";
+  if (/clear danger|clear wide|loose wide ball/.test(text)) return "D19";
+  if (/when to tackle|tackle timing/.test(text)) return "D20";
+  if (/delay.*counter|defend a 2v1/.test(text)) return "D11";
+  if (/block.*shot|box edge/.test(text)) return "D10";
+  if (/stop the cross|block.*cross|close down early/.test(text)) return "D09";
+  if (/show outside|stop the inside cut/.test(text)) return "D08";
+  if (/goal.side|stay compact/.test(text)) return "D07";
+  if (/track.*runner|track.*overlap|late midfield runner/.test(text))
+    return "D06";
+  if (/screen|block.*lane|protect the center/.test(text)) return "D05";
+  if (/balance|opposite half.space|weak side/.test(text)) return "D04";
+  if (/cover|slide behind|shift behind/.test(text)) return "D03";
+  if (/curve.*press|block one side/.test(text)) return "D02";
+  if (/press|close the top|step into/.test(text)) return "D01";
+  return "D03";
+}
+
+const categoryFor = (id: string): SceneCategory =>
+  id.startsWith("WNG")
+    ? "winger"
+    : id.startsWith("STR")
+      ? "striker"
+      : id.startsWith("CM")
+        ? "central-midfielder"
+        : id.startsWith("AM")
+          ? "attacking-midfielder"
+          : id.startsWith("DM")
+            ? "defensive-midfielder"
+            : id.startsWith("FB")
+              ? "fullback"
+              : id.startsWith("CB")
+                ? "center-defender"
+                : id.startsWith("GK")
+                  ? "goalkeeper"
+                  : "teamwork";
+const defensiveIds = new Set([
+  "WNG-07",
+  "STR-07",
+  "CM-07",
+  "AM-06",
+  "DM-01",
+  "DM-03",
+  "DM-04",
+  "DM-06",
+  "FB-01",
+  "FB-02",
+  "FB-05",
+  "FB-06",
+  "CB-01",
+  "CB-02",
+  "CB-03",
+  "CB-04",
+  "CB-05",
+  "CB-06",
+  "CB-13",
+  "CB-27",
+  "GK-01",
+  "GK-02",
+  "GK-03",
+  "GK-04",
+  "GK-05",
+  "GK-06",
+  "GK-07",
+  "TW-07",
+  "TW-08",
+]);
+const crossers = new Set(["WNG-03", "WNG-04", "FB-03", "FB-04"]);
+const finishers = new Set([
+  "WNG-05",
+  "STR-01",
+  "STR-03",
+  "STR-06",
+  "CM-08",
+  "AM-05",
+]);
+const passFinishers = new Set(["STR-05", "AM-03", "TW-06"]);
+const alternateLabels: Record<string, string> = {
+  "WNG-06": "Come short",
+  "STR-05": "Take a safe shot",
+  "CM-02": "Play back",
+  "AM-05": "Recycle safely",
+  "DM-02": "Return first-time",
+  "FB-05": "Slide central",
+  "CB-04": "Pass wide",
+  "GK-04": "Throw wide",
+  "TW-02": "Use other corner",
+};
+const p = (x: number, y: number): Point => ({ x, y });
+function focusedDutyArea(
+  row: InventoryRow,
+  fallback: ActiveArea,
+  nolan: Point,
+  carrier: Point,
+  target: Point,
+): ActiveArea {
+  if (reviewedCoreIds.has(row.id)) return fallback;
+  const family = dutyFamily(row),
+    wide = ["cross", "move", "gk-cross"].includes(family),
+    large = family === "switch",
+    width = large ? 62 : wide ? 36 : family.startsWith("gk-") ? 27 : 32,
+    height = wide ? 24 : family.startsWith("gk-") ? 34 : 30;
+  const focusX = family.startsWith("gk-") ? 8 : (nolan.x + carrier.x) / 2,
+    focusY = wide ? nolan.y : (nolan.y + carrier.y) / 2;
+  return {
+    x: Math.max(1, Math.min(99 - width, focusX - width / 2)),
+    y: Math.max(5, Math.min(59 - height, focusY - height / 2)),
+    width,
+    height,
+    label: dutyLabels[family],
+  };
+}
+const step = (
+  startTime: number,
+  duration: number,
+  action: AnimationStep["action"],
+  actorId?: string,
+  from?: Point,
+  to?: Point,
+  emotion?: AnimationStep["emotion"],
+): AnimationStep => ({
+  startTime,
+  duration,
+  action,
+  actorId,
+  from,
+  to,
+  emotion,
+});
+const actor = (
+  id: string,
+  team: "blue" | "red",
+  role: string,
+  start: Point,
+  number: number,
+  name?: string,
+  goalkeeper = false,
+): AnimatedActor => ({
+  id,
+  team,
+  role,
+  start,
+  facing: team === "blue" ? 0 : 180,
+  jerseyNumber: number,
+  name,
+  goalkeeper,
+});
+const result = (
+  choiceId: string,
+  quality: ChoiceResult["quality"],
+  narration: string,
+  explanation: string,
+  teamEffect: string,
+  animationSteps: AnimationStep[],
+): ChoiceResult => ({
+  choiceId,
+  quality,
+  narration,
+  explanation,
+  teamEffect,
+  comparisonLine:
+    quality === "poor"
+      ? "The other choice helps the whole team."
+      : "This choice solves the game problem.",
+  animationSteps,
+  freezeFrameTime: Math.max(
+    ...animationSteps.map((item) => item.startTime + item.duration),
+  ),
+});
+const choice = (
+  id: string,
+  label: string,
+  icon: string,
+  action: AnimationStep["action"],
+  from: Point,
+  to: Point,
+  previewFacing?: AnimatedChoice["previewFacing"],
+  previewBall?: AnimatedChoice["previewBall"],
+): AnimatedChoice => ({
+  id,
+  label,
+  spokenLabel: label,
+  icon,
+  previewAnimation: [step(0, 1100, action, "nolan", from, to)],
+  previewFacing,
+  previewBall,
+});
+function rolePreview(
+  steps: AnimationStep[],
+  start: Point,
+  fallback: Point,
+  comparison: AnimationStep[] = [],
+) {
+  const bodyActions = new Set([
+      "run",
+      "walk",
+      "turn",
+      "dribble",
+      "defend",
+      "scan",
+      "press",
+      "shield",
+      "set",
+      "dive",
+    ]),
+    motions = steps.filter(
+      (item) =>
+        item.actorId === "nolan" && item.to && bodyActions.has(item.action),
+    ),
+    other = comparison.filter(
+      (item) =>
+        item.actorId === "nolan" && item.to && bodyActions.has(item.action),
+    ),
+    signature = (item: AnimationStep | undefined) =>
+      item
+        ? `${item.action}:${item.from?.x},${item.from?.y}>${item.to?.x},${item.to?.y}`
+        : "";
+  const motion =
+    motions.find(
+      (item, index) => signature(item) !== signature(other[index]),
+    ) ?? motions[0];
+  return {
+    action: motion?.action ?? "walk",
+    from: motion?.from ?? start,
+    to: motion?.to ?? fallback,
+  };
+}
+function semanticDestination(
+  l: ReturnType<typeof layout>,
+  quality: "good" | "poor",
+) {
+  const preferred = quality === "good" ? l.goodTo : l.badTo;
+  if (pointDistance(l.nolan, preferred) >= 4) return preferred;
+  const direction = l.defending ? -1 : 1,
+    vertical = l.nolan.y < 32 ? 8 : -8;
+  return clampPoint(p(l.nolan.x + direction * 12, l.nolan.y + vertical));
+}
+function optionDestination(
+  label: string,
+  l: ReturnType<typeof layout>,
+  quality: "good" | "poor",
+) {
+  const text = label.toLowerCase(),
+    start = l.nolan,
+    vertical = start.y < 32 ? -1 : 1;
+  if (/drop|play back|recycle|reset|come short|support behind/.test(text))
+    return clampPoint(p(start.x - 12, start.y - vertical * 5));
+  if (/run away|stay high|watch outside|celebrate early/.test(text))
+    return clampPoint(p(start.x + 13, start.y + vertical * 9));
+  if (/wide|outside|touchline/.test(text))
+    return clampPoint(p(start.x + 5, start.y < 32 ? 10 : 54));
+  if (/central|inside/.test(text)) return clampPoint(p(start.x + 6, 32));
+  if (/back post|far post/.test(text))
+    return clampPoint(p(Math.max(start.x + 15, 78), start.y < 32 ? 51 : 13));
+  if (/near post|behind|overlap|underlap/.test(text))
+    return clampPoint(p(start.x + 15, start.y + vertical * 7));
+  if (/press|close|track|get goal-side|recover|cover|slide/.test(text))
+    return clampPoint(l.carrier);
+  return semanticDestination(l, quality);
+}
+function namedKick(label: string): AnimationStep["action"] {
+  if (/^cross|^cut/i.test(label)) return "cross";
+  if (/^shoot|^finish/i.test(label)) return "shoot";
+  if (/^clear/i.test(label)) return "clear";
+  if (/^(?:push|parry|tip)/i.test(label)) return "parry";
+  return "pass";
+}
+function neutralChoiceIcon(label: string) {
+  const intent = optionIntent(label);
+  if (["ball", "ball-hold"].includes(intent)) return "⚽";
+  if (intent === "ball-travel") return "🔁";
+  if (["travel", "defend"].includes(intent)) return "🏃";
+  if (["orient", "closed-receive"].includes(intent)) return "👀";
+  if (["hold", "active-hold"].includes(intent)) return "⏸️";
+  return "🧭";
+}
+function predictionLabel(
+  row: InventoryRow,
+  quality: "good" | "alternate" | "poor",
+  defending: boolean,
+) {
+  if (quality === "alternate") return "Blue keeps a safe option";
+  if (quality === "poor")
+    return defending ? "Red reaches the danger" : "The opening closes";
+  const family = dutyFamily(row);
+  if (defending)
+    return family === "press"
+      ? "Red is forced away"
+      : "Blue protects the danger";
+  if (["finish", "cross"].includes(family)) return "Blue creates a chance";
+  if (["switch", "combine"].includes(family)) return "Blue finds open space";
+  return "Blue keeps the move going";
+}
+function enforceOptionResult(
+  label: string,
+  quality: "good" | "poor",
+  l: ReturnType<typeof layout>,
+  raw: AnimationStep[],
+): AnimationStep[] {
+  const intent = optionIntent(label),
+    start = l.nolan,
+    destination = optionDestination(label, l, quality);
+  if (intent === "closed-receive")
+    return [
+      step(0, 800, "pass", "blue1", l.carrier, start),
+      step(650, 500, "receive", "nolan", start, start),
+      step(900, 1100, "press", "red1", undefined, start),
+      step(1700, 600, "block", "red1", start, start),
+      step(
+        2200,
+        1000,
+        "dribble",
+        "red1",
+        start,
+        p(Math.max(12, start.x - 16), Math.max(8, Math.min(56, start.y + 8))),
+      ),
+      step(3200, 500, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  if (intent === "active-hold") {
+    const withoutRole = raw.filter((item) => item.actorId !== "nolan");
+    return [
+      step(0, 700, "scan", "nolan", start, start),
+      step(650, 1000, "defend", "nolan", start, start),
+      ...withoutRole,
+      step(3300, 500, "celebrate", "nolan", undefined, undefined, "happy"),
+    ];
+  }
+  if (intent === "ball-hold") {
+    const action = namedKick(label),
+      target = quality === "good" ? l.target : l.badTo;
+    return [
+      step(0, 500, "receive", "nolan", start, start),
+      step(500, 850, action, "nolan", start, target),
+      step(1300, 600, "receive", "blue2", target, target),
+      step(1700, 900, "press", "red1", undefined, target),
+      step(
+        2700,
+        500,
+        "react",
+        "nolan",
+        undefined,
+        undefined,
+        quality === "poor" ? "worried" : "happy",
+      ),
+      step(
+        3300,
+        500,
+        "react",
+        "blue2",
+        undefined,
+        undefined,
+        quality === "poor" ? "worried" : "happy",
+      ),
+    ];
+  }
+  if (intent === "ball-travel") {
+    const action = namedKick(label),
+      target = l.target;
+    return [
+      step(0, 700, action, "nolan", start, target),
+      step(300, 1500, "run", "nolan", start, destination),
+      step(900, 600, "receive", "blue2", target, target),
+      step(1700, 700, "pass", "blue2", target, destination),
+      step(2500, 500, "receive", "nolan", destination, destination),
+      step(3200, 500, "celebrate", "nolan", undefined, undefined, "happy"),
+    ];
+  }
+  if (intent === "hold") {
+    const withoutRole = raw.filter((item) => item.actorId !== "nolan");
+    return [
+      step(
+        0,
+        1500,
+        "react",
+        "nolan",
+        start,
+        start,
+        quality === "poor" ? "worried" : undefined,
+      ),
+      ...withoutRole,
+      step(
+        3300,
+        500,
+        "react",
+        "nolan",
+        undefined,
+        undefined,
+        quality === "poor" ? "worried" : "happy",
+      ),
+    ];
+  }
+  if (intent === "orient") {
+    const withoutEarlyWrong = raw.filter(
+      (item) =>
+        !(
+          item.actorId === "nolan" &&
+          item.startTime < 1000 &&
+          movementActions.has(item.action)
+        ),
+    );
+    return [
+      step(0, 550, "scan", "nolan", start, start),
+      step(
+        500,
+        650,
+        "turn",
+        "nolan",
+        start,
+        p(start.x + (l.defending ? -1.5 : 1.5), start.y),
+      ),
+      ...withoutEarlyWrong.map((item) => ({
+        ...item,
+        startTime: item.startTime + 900,
+      })),
+    ];
+  }
+  if (intent === "travel") {
+    const first = raw.find(
+        (item) =>
+          item.actorId === "nolan" &&
+          item.from &&
+          item.to &&
+          movementActions.has(item.action) &&
+          pointDistance(item.from, item.to) >= 3.5,
+      ),
+      old = first?.to;
+    const mapped = raw.map((item) => {
+      const replace = (point: Point | undefined) =>
+        point && old && pointDistance(point, old) < 1.5 ? destination : point;
+      if (item === first) return { ...item, from: start, to: destination };
+      const blueFollow =
+        !l.defending &&
+        item.actorId &&
+        l.actors.find((actor) => actor.id === item.actorId)?.team === "blue";
+      return blueFollow
+        ? { ...item, from: replace(item.from), to: replace(item.to) }
+        : item;
+    });
+    return first
+      ? mapped
+      : [
+          step(
+            0,
+            1400,
+            quality === "poor" ? "walk" : "run",
+            "nolan",
+            start,
+            destination,
+          ),
+          ...raw
+            .filter(
+              (item) =>
+                item.actorId !== "nolan" || !movementActions.has(item.action),
+            )
+            .map((item) => ({ ...item, startTime: item.startTime + 700 })),
+        ];
+  }
+  if (intent === "ball") {
+    const action = namedKick(label);
+    if (/recycle|play back|return/i.test(label)) {
+      const reset = p(Math.min(start.x - 8, l.carrier.x), l.carrier.y);
+      return [
+        step(0, 500, "receive", "nolan", start, start),
+        step(600, 850, "pass", "nolan", start, reset),
+        step(1400, 500, "receive", "blue1", reset, reset),
+        step(
+          2000,
+          900,
+          "dribble",
+          "blue1",
+          reset,
+          p(Math.max(10, reset.x - 8), reset.y + 5),
+        ),
+        step(3000, 500, "celebrate", "nolan", undefined, undefined, "happy"),
+      ];
+    }
+    const hasKick = raw.some(
+      (item) => item.actorId === "nolan" && kickActions.has(item.action),
+    );
+    if (hasKick) return raw;
+    const target = quality === "good" ? l.target : l.badTo;
+    return [
+      step(0, 700, "receive", "nolan", start, start),
+      step(650, 900, action, "nolan", start, target),
+      step(
+        1450,
+        700,
+        quality === "good" ? "receive" : "block",
+        quality === "good" ? "blue2" : "red1",
+        target,
+        target,
+      ),
+      ...raw
+        .filter((item) => item.actorId !== "nolan")
+        .map((item) => ({ ...item, startTime: item.startTime + 1600 })),
+    ];
+  }
+  return raw;
+}
+function semanticChoice(
+  id: string,
+  label: string,
+  icon: string,
+  quality: "good" | "poor",
+  l: ReturnType<typeof layout>,
+  steps: AnimationStep[],
+  comparison: AnimationStep[],
+): AnimatedChoice {
+  const intent = optionIntent(label),
+    start = l.nolan,
+    ordered = [...steps].sort((a, b) => a.startTime - b.startTime),
+    base = rolePreview(
+      ordered,
+      start,
+      quality === "good" ? l.goodTo : l.badTo,
+      comparison,
+    );
+  if (intent === "active-hold")
+    return choice(id, label, icon, "scan", start, start, {
+      from: l.defending ? 0 : 180,
+      to: l.defending ? 75 : 105,
+    });
+  if (intent === "ball-hold") {
+    const action = namedKick(label),
+      kick = ordered.find(
+        (item) =>
+          item.actorId === "nolan" && kickActions.has(item.action) && item.to,
+      ),
+      target = kick?.to ?? (quality === "good" ? l.target : l.badTo);
+    return choice(id, label, icon, action, start, start, undefined, {
+      from: kick?.from ?? start,
+      to: target,
+      action,
+    });
+  }
+  if (intent === "ball-travel") {
+    const action = namedKick(label),
+      kick = ordered.find(
+        (item) =>
+          item.actorId === "nolan" && kickActions.has(item.action) && item.to,
+      ),
+      motion = ordered.find(
+        (item) =>
+          item.actorId === "nolan" &&
+          item.to &&
+          rolePathActions.has(item.action),
+      ),
+      destination = motion?.to ?? optionDestination(label, l, quality),
+      target = kick?.to ?? l.target;
+    return choice(id, label, icon, "run", start, destination, undefined, {
+      from: kick?.from ?? start,
+      to: target,
+      action,
+    });
+  }
+  if (intent === "hold" || intent === "closed-receive")
+    return choice(
+      id,
+      label,
+      icon,
+      intent === "closed-receive" ? "receive" : "react",
+      start,
+      start,
+      undefined,
+      intent === "closed-receive"
+        ? { from: l.carrier, to: start, action: "pass" }
+        : undefined,
+    );
+  if (intent === "orient")
+    return choice(
+      id,
+      label,
+      icon,
+      "turn",
+      start,
+      p(start.x + (l.defending ? -1.5 : 1.5), start.y),
+      { from: l.defending ? 0 : 180, to: l.defending ? 90 : 0 },
+      /receive|back foot|half turn/i.test(label)
+        ? { from: l.carrier, to: start, action: "pass" }
+        : undefined,
+    );
+  if (intent === "travel") {
+    const motion = ordered.find(
+      (item) =>
+        item.actorId === "nolan" && item.to && rolePathActions.has(item.action),
+    );
+    return choice(
+      id,
+      label,
+      icon,
+      quality === "poor" ? "walk" : "run",
+      start,
+      motion?.to ?? optionDestination(label, l, quality),
+    );
+  }
+  if (intent === "ball") {
+    const action = namedKick(label),
+      kick = ordered.find(
+        (item) =>
+          item.actorId === "nolan" && kickActions.has(item.action) && item.to,
+      ),
+      target = kick?.to ?? (quality === "good" ? l.target : l.badTo),
+      approach = ordered.find(
+        (item) =>
+          item.actorId === "nolan" &&
+          item.from &&
+          item.to &&
+          movementActions.has(item.action) &&
+          pointDistance(item.from, item.to) >= 3.5 &&
+          (!kick || item.startTime <= kick.startTime),
+      );
+    return choice(
+      id,
+      label,
+      icon,
+      approach?.action ?? action,
+      start,
+      approach?.to ?? start,
+      undefined,
+      { from: kick?.from ?? start, to: target, action },
+    );
+  }
+  if (quality === "poor")
+    return choice(
+      id,
+      label,
+      icon,
+      "walk",
+      start,
+      clampPoint(p(start.x - 12, start.y + (start.y < 32 ? 10 : -10))),
+    );
+  const facing = ["scan", "turn", "set"].includes(base.action)
+    ? { from: l.defending ? 0 : 180, to: l.defending ? 90 : 0 }
+    : undefined;
+  return choice(id, label, icon, base.action, base.from, base.to, facing);
+}
+function alignChoicePreview(
+  item: AnimatedChoice,
+  steps: AnimationStep[],
+  l: ReturnType<typeof layout>,
+): AnimatedChoice {
+  const intent = optionIntent(item.label);
+  if (
+    ["hold", "active-hold", "closed-receive", "orient", "ball-hold"].includes(
+      intent,
+    )
+  )
+    return item;
+  const motion = [...steps]
+    .sort((a, b) => a.startTime - b.startTime)
+    .find(
+      (candidate) =>
+        candidate.actorId === "nolan" &&
+        candidate.from &&
+        candidate.to &&
+        [
+          "run",
+          "walk",
+          "dribble",
+          "defend",
+          "press",
+          "shield",
+          "dive",
+        ].includes(candidate.action) &&
+        pointDistance(candidate.from, candidate.to) >= 4,
+    );
+  return motion
+    ? {
+        ...item,
+        previewAnimation: [
+          step(0, 1100, motion.action, "nolan", l.nolan, motion.to),
+        ],
+      }
+    : item;
+}
+const rolePathActions = new Set<AnimationStep["action"]>([
+  "run",
+  "walk",
+  "dribble",
+  "defend",
+  "press",
+  "shield",
+]);
+function readableDestination(start: Point, to: Point, minDistance = 18) {
+  const dx = to.x - start.x,
+    dy = to.y - start.y,
+    length = Math.hypot(dx, dy);
+  if (length >= minDistance) return to;
+  const ux = length > 1 ? dx / length : 1,
+    uy = length > 1 ? dy / length : start.y < 32 ? 1 : -1;
+  let destination = clampPoint(
+    p(start.x + ux * minDistance, start.y + uy * minDistance),
+  );
+  if (pointDistance(start, destination) >= minDistance - 1) return destination;
+  const vertical = start.y < 32 ? 1 : -1;
+  destination = clampPoint(
+    p(
+      start.x + ux * Math.min(12, minDistance),
+      start.y + vertical * minDistance,
+    ),
+  );
+  return destination;
+}
+function remapEndpoint(
+  steps: AnimationStep[],
+  old: Point,
+  destination: Point,
+  actors: AnimatedActor[],
+) {
+  const replace = (point: Point | undefined) =>
+    point && pointDistance(point, old) < 1.5 ? destination : point;
+  return steps.map((item) => {
+    const team = item.actorId
+      ? actors.find((actor) => actor.id === item.actorId)?.team
+      : undefined;
+    return team === "blue" || item.actorId === "nolan"
+      ? { ...item, from: replace(item.from), to: replace(item.to) }
+      : item;
+  });
+}
+function ensurePhoneReadableSteps(
+  label: string,
+  steps: AnimationStep[],
+  l: ReturnType<typeof layout>,
+) {
+  const intent = optionIntent(label);
+  let repaired = steps;
+  if (
+    !["hold", "active-hold", "closed-receive", "orient", "ball-hold"].includes(
+      intent,
+    )
+  ) {
+    const first = [...repaired]
+      .sort((a, b) => a.startTime - b.startTime)
+      .find(
+        (item) =>
+          item.actorId === "nolan" &&
+          item.from &&
+          item.to &&
+          rolePathActions.has(item.action) &&
+          pointDistance(item.from, item.to) > 1.5,
+      );
+    if (first?.to) {
+      const old = first.to,
+        destination = readableDestination(l.nolan, old),
+        firstIndex = repaired.indexOf(first);
+      repaired = remapEndpoint(repaired, old, destination, l.actors).map(
+        (item, index) =>
+          index === firstIndex
+            ? { ...item, from: l.nolan, to: destination }
+            : item,
+      );
+    }
+  }
+  if (["ball", "ball-travel", "ball-hold"].includes(intent)) {
+    const kick = repaired.find(
+      (item) =>
+        item.actorId === "nolan" &&
+        item.from &&
+        item.to &&
+        kickActions.has(item.action),
+    );
+    if (kick?.from && kick.to && pointDistance(kick.from, kick.to) < 18) {
+      const old = kick.to,
+        destination = readableDestination(kick.from, old, 20),
+        kickIndex = repaired.indexOf(kick);
+      repaired = remapEndpoint(repaired, old, destination, l.actors).map(
+        (item, index) =>
+          index === kickIndex ? { ...item, to: destination } : item,
+      );
+    }
   }
   return repaired;
 }
-function contrastSteps(steps:AnimationStep[],reference:AnimatedChoice,l:ReturnType<typeof layout>,quarterTurn=false){
-  const first=[...steps].sort((a,b)=>a.startTime-b.startTime).find((item)=>item.actorId==='nolan'&&item.from&&item.to&&rolePathActions.has(item.action)&&pointDistance(item.from,item.to)>1.5);
-  const referenceMove=reference.previewAnimation.find((item)=>item.actorId==='nolan'&&item.from&&item.to);
-  if(first?.to&&referenceMove?.to){
-    const gx=referenceMove.to.x-l.nolan.x,gy=referenceMove.to.y-l.nolan.y,length=Math.max(1,Math.hypot(gx,gy));
-    const ux=quarterTurn?-gy/length:-gx/length,uy=quarterTurn?gx/length:-gy/length;
-    const destination=readableDestination(l.nolan,clampPoint(p(l.nolan.x+ux*25,l.nolan.y+uy*25)),22),old=first.to,firstIndex=steps.indexOf(first);
-    return remapEndpoint(steps,old,destination,l.actors).map((item,index)=>index===firstIndex?{...item,from:l.nolan,to:destination}:item);
+function contrastSteps(
+  steps: AnimationStep[],
+  reference: AnimatedChoice,
+  l: ReturnType<typeof layout>,
+  quarterTurn = false,
+) {
+  const first = [...steps]
+    .sort((a, b) => a.startTime - b.startTime)
+    .find(
+      (item) =>
+        item.actorId === "nolan" &&
+        item.from &&
+        item.to &&
+        rolePathActions.has(item.action) &&
+        pointDistance(item.from, item.to) > 1.5,
+    );
+  const referenceMove = reference.previewAnimation.find(
+    (item) => item.actorId === "nolan" && item.from && item.to,
+  );
+  if (first?.to && referenceMove?.to) {
+    const gx = referenceMove.to.x - l.nolan.x,
+      gy = referenceMove.to.y - l.nolan.y,
+      length = Math.max(1, Math.hypot(gx, gy));
+    const ux = quarterTurn ? -gy / length : -gx / length,
+      uy = quarterTurn ? gx / length : -gy / length;
+    const destination = readableDestination(
+        l.nolan,
+        clampPoint(p(l.nolan.x + ux * 25, l.nolan.y + uy * 25)),
+        22,
+      ),
+      old = first.to,
+      firstIndex = steps.indexOf(first);
+    return remapEndpoint(steps, old, destination, l.actors).map(
+      (item, index) =>
+        index === firstIndex
+          ? { ...item, from: l.nolan, to: destination }
+          : item,
+    );
   }
-  const kick=steps.find((item)=>item.actorId==='nolan'&&item.from&&item.to&&kickActions.has(item.action));
-  if(kick?.from&&kick.to&&reference.previewBall){
-    const gx=reference.previewBall.to.x-reference.previewBall.from.x,gy=reference.previewBall.to.y-reference.previewBall.from.y,length=Math.max(1,Math.hypot(gx,gy));
-    const ux=quarterTurn?-gy/length:-gx/length,uy=quarterTurn?gx/length:-gy/length;
-    const destination=readableDestination(kick.from,clampPoint(p(kick.from.x+ux*25,kick.from.y+uy*25)),22),old=kick.to,kickIndex=steps.indexOf(kick);
-    return remapEndpoint(steps,old,destination,l.actors).map((item,index)=>index===kickIndex?{...item,to:destination}:item);
+  const kick = steps.find(
+    (item) =>
+      item.actorId === "nolan" &&
+      item.from &&
+      item.to &&
+      kickActions.has(item.action),
+  );
+  if (kick?.from && kick.to && reference.previewBall) {
+    const gx = reference.previewBall.to.x - reference.previewBall.from.x,
+      gy = reference.previewBall.to.y - reference.previewBall.from.y,
+      length = Math.max(1, Math.hypot(gx, gy));
+    const ux = quarterTurn ? -gy / length : -gx / length,
+      uy = quarterTurn ? gx / length : -gy / length;
+    const destination = readableDestination(
+        kick.from,
+        clampPoint(p(kick.from.x + ux * 25, kick.from.y + uy * 25)),
+        22,
+      ),
+      old = kick.to,
+      kickIndex = steps.indexOf(kick);
+    return remapEndpoint(steps, old, destination, l.actors).map(
+      (item, index) =>
+        index === kickIndex ? { ...item, to: destination } : item,
+    );
   }
   return steps;
 }
-function synchronizeReadableChoice(choiceItem:AnimatedChoice,steps:AnimationStep[],l:ReturnType<typeof layout>){
-  const intent=optionIntent(choiceItem.label),preview=choiceItem.previewAnimation.find((item)=>item.actorId==='nolan'&&item.from&&item.to);
-  if(!['travel','ball-travel'].includes(intent)||!preview?.from||!preview.to||pointDistance(preview.from,preview.to)>=18)return{choice:choiceItem,steps};
-  const destination=readableDestination(l.nolan,preview.to),ordered=[...steps].sort((a,b)=>a.startTime-b.startTime),first=ordered.find((item)=>item.actorId==='nolan'&&item.from&&item.to&&rolePathActions.has(item.action)&&pointDistance(item.from,item.to)>1.5);
-  if(!first?.to)return{choice:{...choiceItem,previewAnimation:[{...preview,to:destination}]},steps};
-  const firstIndex=steps.indexOf(first),updated=remapEndpoint(steps,first.to,destination,l.actors).map((item,index)=>index===firstIndex?{...item,from:l.nolan,to:destination}:item);
-  return{choice:{...choiceItem,previewAnimation:[{...preview,from:l.nolan,to:destination}]},steps:updated};
-}
-function appendSafeExit(actorId:string,steps:AnimationStep[],l:ReturnType<typeof layout>,setup:AnimationStep[]){
-  const frame=[...steps].sort((a,b)=>a.startTime-b.startTime).reduce(applyAnimationStep,finalFrame(l.actors,l.carrier,setup)),actorItem=l.actors.find((item)=>item.id===actorId);
-  if(!actorItem)return steps;
-  const current=frame.actors[actorId].position,candidates:Array<Point>=[];
-  for(let y=10;y<=54;y+=8)for(let x=10;x<=90;x+=10)candidates.push(p(x,y));
-  const destination=candidates.sort((a,b)=>pointDistance(a,current)-pointDistance(b,current)).find((candidate)=>l.actors.every((other)=>other.id===actorId||!visuallyOccludes(actorItem,candidate,other,frame.actors[other.id].position)));
-  return destination?[...steps,step(Math.max(...steps.map((item)=>item.startTime+item.duration))+10,600,actorItem.team==='red'?'defend':'run',actorId,current,destination)]:steps;
-}
-
-type FormationSlot={role:string;position:Point;number:number;goalkeeper?:boolean};
-const blueFormation:FormationSlot[]=[
-  {role:'Goalkeeper',position:p(8,32),number:1,goalkeeper:true},
-  {role:'Fullback',position:p(23,20),number:3},{role:'Center defender',position:p(23,44),number:4},
-  {role:'Left winger',position:p(43,14),number:11},{role:'Central midfielder',position:p(40,32),number:8},
-  {role:'Right winger',position:p(43,50),number:7},{role:'Striker',position:p(63,32),number:9},
-];
-const redFormation:FormationSlot[]=[
-  {role:'Goalkeeper',position:p(92,32),number:1,goalkeeper:true},
-  {role:'Fullback',position:p(77,44),number:3},{role:'Center defender',position:p(77,20),number:4},
-  {role:'Left winger',position:p(57,50),number:11},{role:'Central midfielder',position:p(60,32),number:8},
-  {role:'Right winger',position:p(57,14),number:7},{role:'Striker',position:p(37,32),number:9},
-];
-const roleFamily=(role:string)=>role.toLowerCase().includes('goalkeeper')?'goalkeeper':role.toLowerCase().includes('defender')||role.toLowerCase().includes('fullback')?'defender':role.toLowerCase().includes('midfielder')?'midfielder':role.toLowerCase().includes('striker')?'striker':role.toLowerCase().includes('winger')?'winger':'player';
-function completeMatch(activeActors:AnimatedActor[],index:number){
-  const completeTeam=(team:'blue'|'red',formation:FormationSlot[])=>{
-    const current=activeActors.filter((item)=>item.team===team),available=[...formation];
-    current.forEach((item)=>{const family=roleFamily(item.role);let slotIndex=available.findIndex((slot)=>roleFamily(slot.role)===family);if(slotIndex<0)slotIndex=0;available.splice(slotIndex,1)});
-    const shift=(index%3-1)*.35;
-    return [...current,...available.map((slot,slotIndex)=>actor(`support-${team}-${slotIndex}`,team,slot.role,p(slot.position.x,slot.position.y+shift),slot.number,undefined,Boolean(slot.goalkeeper)))];
+function synchronizeReadableChoice(
+  choiceItem: AnimatedChoice,
+  steps: AnimationStep[],
+  l: ReturnType<typeof layout>,
+) {
+  const intent = optionIntent(choiceItem.label),
+    preview = choiceItem.previewAnimation.find(
+      (item) => item.actorId === "nolan" && item.from && item.to,
+    );
+  if (
+    !["travel", "ball-travel"].includes(intent) ||
+    !preview?.from ||
+    !preview.to ||
+    pointDistance(preview.from, preview.to) >= 18
+  )
+    return { choice: choiceItem, steps };
+  const destination = readableDestination(l.nolan, preview.to),
+    ordered = [...steps].sort((a, b) => a.startTime - b.startTime),
+    first = ordered.find(
+      (item) =>
+        item.actorId === "nolan" &&
+        item.from &&
+        item.to &&
+        rolePathActions.has(item.action) &&
+        pointDistance(item.from, item.to) > 1.5,
+    );
+  if (!first?.to)
+    return {
+      choice: {
+        ...choiceItem,
+        previewAnimation: [{ ...preview, to: destination }],
+      },
+      steps,
+    };
+  const firstIndex = steps.indexOf(first),
+    updated = remapEndpoint(steps, first.to, destination, l.actors).map(
+      (item, index) =>
+        index === firstIndex
+          ? { ...item, from: l.nolan, to: destination }
+          : item,
+    );
+  return {
+    choice: {
+      ...choiceItem,
+      previewAnimation: [{ ...preview, from: l.nolan, to: destination }],
+    },
+    steps: updated,
   };
-  return spreadActorStarts([...completeTeam('blue',blueFormation),...completeTeam('red',redFormation)]);
+}
+function appendSafeExit(
+  actorId: string,
+  steps: AnimationStep[],
+  l: ReturnType<typeof layout>,
+  setup: AnimationStep[],
+) {
+  const frame = [...steps]
+      .sort((a, b) => a.startTime - b.startTime)
+      .reduce(applyAnimationStep, finalFrame(l.actors, l.carrier, setup)),
+    actorItem = l.actors.find((item) => item.id === actorId);
+  if (!actorItem) return steps;
+  const current = frame.actors[actorId].position,
+    candidates: Array<Point> = [];
+  for (let y = 10; y <= 54; y += 8)
+    for (let x = 10; x <= 90; x += 10) candidates.push(p(x, y));
+  const destination = candidates
+    .sort((a, b) => pointDistance(a, current) - pointDistance(b, current))
+    .find((candidate) =>
+      l.actors.every(
+        (other) =>
+          other.id === actorId ||
+          !visuallyOccludes(
+            actorItem,
+            candidate,
+            other,
+            frame.actors[other.id].position,
+          ),
+      ),
+    );
+  return destination
+    ? [
+        ...steps,
+        step(
+          Math.max(...steps.map((item) => item.startTime + item.duration)) + 10,
+          600,
+          actorItem.team === "red" ? "defend" : "run",
+          actorId,
+          current,
+          destination,
+        ),
+      ]
+    : steps;
 }
 
-function layout(row:InventoryRow,index:number){
-  const category=categoryFor(row.id),defending=defensiveIds.has(row.id)||row.assets.startsWith('defensive'),goalkeeper=category==='goalkeeper';const lane=index%3;const unique=(index+1)/1000;const y=(lane===0?17:lane===1?32:47)+unique;const jitter=(index%4)*2+unique;
-  const lineups:Record<SceneCategory,{blue1:string;blue2:string;red1:string;red2:string}>={winger:{blue1:'Central midfielder',blue2:'Striker',red1:'Fullback',red2:'Center defender'},striker:{blue1:'Attacking midfielder',blue2:'Winger',red1:'Center defender',red2:'Center defender'},'central-midfielder':{blue1:'Center defender',blue2:'Winger',red1:'Central midfielder',red2:'Defensive midfielder'},'attacking-midfielder':{blue1:'Central midfielder',blue2:'Striker',red1:'Defensive midfielder',red2:'Center defender'},'defensive-midfielder':{blue1:'Center defender',blue2:'Fullback',red1:'Attacking midfielder',red2:'Striker'},fullback:{blue1:'Winger',blue2:'Central midfielder',red1:'Winger',red2:'Fullback'},'center-defender':{blue1:'Fullback',blue2:'Defensive midfielder',red1:'Striker',red2:'Attacking midfielder'},goalkeeper:{blue1:'Center defender',blue2:'Fullback',red1:'Striker',red2:'Winger'},teamwork:{blue1:'Central midfielder',blue2:'Winger',red1:'Defender',red2:'Striker'}};const lineup=lineups[category];
-  const defensiveWideY=Math.max(5,Math.min(36,y-11.5));const areaByCategory:Record<SceneCategory,{attack:[number,number,number,number,string];defense:[number,number,number,number,string]}>= {winger:{attack:[50,index%2?36:5,46,23,'wide attack'],defense:[28,defensiveWideY,36,23,'wide recovery']},striker:{attack:[65,14,31,36,'scoring area'],defense:[54,12,40,40,'pressing area']},'central-midfielder':{attack:[25,9,50,46,'middle third'],defense:[16,9,46,46,'central cover']},'attacking-midfielder':{attack:[48,12,40,40,'between lines'],defense:[47,10,42,44,'counterpress']},'defensive-midfielder':{attack:[12,9,48,46,'build-up base'],defense:[8,10,45,44,'screening zone']},fullback:{attack:[48,index%2?36:5,45,23,'overlap lane'],defense:[3,defensiveWideY,42,23,'wide defense']},'center-defender':{attack:[5,10,48,44,'build-up line'],defense:[2,12,41,40,'danger area']},goalkeeper:{attack:[1,18,25,29,'goal area'],defense:[1,18,25,29,'goal area']},teamwork:{attack:[22,8,58,48,'team shape'],defense:[15,8,55,48,'team defense']}};const [ax,ay,aw,ah,areaLabel]=(defending?areaByCategory[category].defense:areaByCategory[category].attack);
-  const areaShift=category==='goalkeeper'?0:(index%3-1)*1.5;const activeArea={x:Math.max(0,Math.min(100-aw,ax+areaShift)),y:Math.max(4,Math.min(60-ah,ay+(index%2?1.2:-1.2))),width:aw,height:ah,label:areaLabel};
-  if(goalkeeper){const nolan=p(8,32),redBall=p(38+jitter,y),red2=p(28+jitter,48-y/3),target=p(25,14+(index%2)*35),active=[actor('nolan','blue','Goalkeeper',nolan,1,'Nolan',true),actor('blue1','blue',lineup.blue1,p(22,20),4),actor('blue2','blue',lineup.blue2,p(30,51),2),actor('redBall','red',lineup.red1,redBall,9),actor('red2','red',lineup.red2,red2,10),actor('redGK','red','Goalkeeper',p(92,32),1,undefined,true)];return{defending:true,nolan,carrier:redBall,goodTo:p(13,30+(index%3)*3),badTo:p(7,34),target,activeArea:focusedDutyArea(row,activeArea,nolan,redBall,target),actors:completeMatch(active,index)};}
-  if(defending){const defensiveX:Record<SceneCategory,[number,number]>={winger:[38,50],striker:[62,72],'central-midfielder':[34,47],'attacking-midfielder':[56,64],'defensive-midfielder':[30,44],fullback:[27,43],'center-defender':[25,41],goalkeeper:[8,38],teamwork:[30,44]};const[nolanX,carrierX]=defensiveX[category],defenseY=category==='striker'||category==='attacking-midfielder'||category==='defensive-midfielder'||category==='center-defender'||category==='teamwork'?32:y;const nolan=p(nolanX+unique,defenseY),redBall=p(carrierX+jitter/3,Math.max(12,Math.min(52,defenseY-3))),red2=p(carrierX+8,Math.max(13,Math.min(51,defenseY+12))),target=p(Math.max(14,nolanX-9),12+(index%3)*19),active=[actor('nolan','blue',row.role,nolan,7,'Nolan'),actor('blue1','blue',lineup.blue1,p(Math.max(18,nolanX-8),45),4),actor('blue2','blue',lineup.blue2,p(Math.max(16,nolanX-11),17),2),actor('blueGK','blue','Goalkeeper',p(8,32),1,undefined,true),actor('redBall','red',lineup.red1,redBall,10),actor('red2','red',lineup.red2,red2,9),actor('red3','red','Supporting midfielder',p(Math.min(76,carrierX+5),47),8),actor('redGK','red','Goalkeeper',p(92,32),1,undefined,true)];return{defending:true,nolan,carrier:redBall,goodTo:p(Math.min(carrierX-3,nolanX+6),defenseY-2),badTo:p(Math.min(88,carrierX+4),defenseY+5),target,activeArea:focusedDutyArea(row,activeArea,nolan,redBall,target),actors:completeMatch(active,index)};}
-  const wideY=index%2===0?13+unique:51-unique;
-  const positions:Record<SceneCategory,{nolan:Point;carrier:Point;target:Point;primary:Point;secondary:Point;good:Point;bad:Point}>={winger:{nolan:p(58,wideY),carrier:p(40,32),target:p(75,40),primary:p(67,wideY+5),secondary:p(80,34),good:p(61,wideY),bad:p(65,wideY+3)},striker:{nolan:p(70,32),carrier:p(48,35),target:p(62,wideY),primary:p(78,27),secondary:p(80,42),good:p(82,34),bad:p(76,32)},'central-midfielder':{nolan:p(44,32),carrier:p(25,35),target:p(67,wideY),primary:p(54,25),secondary:p(58,42),good:p(48,32),bad:p(53,32)},'attacking-midfielder':{nolan:p(61,32),carrier:p(42,35),target:p(79,38),primary:p(69,25),secondary:p(76,43),good:p(65,34),bad:p(69,32)},'defensive-midfielder':{nolan:p(31,32),carrier:p(18,36),target:p(48,wideY),primary:p(43,25),secondary:p(50,43),good:p(35,32),bad:p(42,32)},fullback:{nolan:p(49,wideY),carrier:p(58,wideY+5),target:p(78,34),primary:p(68,wideY+7),secondary:p(76,38),good:p(65,wideY),bad:p(62,wideY+4)},'center-defender':{nolan:p(26,32),carrier:p(17,wideY),target:p(45,wideY),primary:p(43,27),secondary:p(49,42),good:p(30,32),bad:p(40,32)},goalkeeper:{nolan:p(8,32),carrier:p(38,32),target:p(25,wideY),primary:p(30,32),secondary:p(40,40),good:p(12,32),bad:p(7,34)},teamwork:{nolan:p(55,32),carrier:p(35,35),target:p(75,wideY),primary:p(65,25),secondary:p(73,43),good:p(59,32),bad:p(64,32)}};
-  const pos=positions[category],family=dutyFamily(row),primaryRole=category==='fullback'?'Fullback':lineup.red1,nolan=p(pos.nolan.x+unique,pos.nolan.y),carrier=p(pos.carrier.x+unique/2,pos.carrier.y);
-  let target=p(pos.target.x,pos.target.y+unique),primary=p(pos.primary.x+unique,pos.primary.y),secondary=p(pos.secondary.x,pos.secondary.y+unique),goodTo=p(pos.good.x+unique,pos.good.y),badTo=p(pos.bad.x,pos.bad.y+unique);
-  if(family==='receive'||family==='hold'||family==='possession'||family==='build'){goodTo=p(nolan.x+2,nolan.y);primary=p(Math.max(nolan.x+10,primary.x),Math.max(9,Math.min(55,nolan.y+(index%2?8:-8))));badTo=p(primary.x-2,primary.y)}
-  if(family==='carry'){primary=p(nolan.x+9,nolan.y);goodTo=p(primary.x+5,Math.max(9,Math.min(55,nolan.y+(index%2?10:-10))));badTo=p(primary.x-1,primary.y)}
-  if(family==='move'){const behind=/behind|back.post|beyond|overlap|underlap/.test(row.decision.toLowerCase());goodTo=behind?p(primary.x+7,Math.max(8,Math.min(56,nolan.y+(index%2?7:-7)))):p(nolan.x+4,Math.max(8,Math.min(56,nolan.y+(index%2?8:-8))));badTo=p(primary.x-1,primary.y)}
-  if(family==='combine'){goodTo=p(primary.x+5,Math.max(9,Math.min(55,primary.y+(index%2?10:-10))));target=p(nolan.x+9,Math.max(9,Math.min(55,nolan.y+(index%2?-8:8))));badTo=p(primary.x-1,primary.y)}
-  if(family==='switch'){target=p(Math.max(62,nolan.x+16),nolan.y<32?51:13);primary=p(nolan.x+7,nolan.y);secondary=p(nolan.x+10,Math.max(9,Math.min(55,nolan.y+(index%2?7:-7))));goodTo=p(nolan.x+1,nolan.y);badTo=p(primary.x-1,primary.y)}
-  if(family==='cross'){goodTo=p(Math.max(75,nolan.x+13),nolan.y<32?10:54);primary=p(nolan.x+8,nolan.y<32?nolan.y+7:nolan.y-7);target=p(82,34);badTo=p(primary.x-1,primary.y)}
-  if(family==='finish'){goodTo=p(82,index%2?38:27);primary=p(78,index%2?27:39);secondary=p(84,index%2?43:22);target=p(74,index%2?18:48);badTo=p(primary.x-2,primary.y)}
-  const active=[actor('nolan','blue',row.role,nolan,7,'Nolan'),actor('blue1','blue',lineup.blue1,carrier,8),actor('blue2','blue',lineup.blue2,target,11),actor('blueGK','blue','Goalkeeper',p(8,32),1,undefined,true),actor('red1','red',primaryRole,primary,4),actor('red2','red',lineup.red2,secondary,5),actor('redGK','red','Goalkeeper',p(92,32),1,undefined,true)];
-  return{defending:false,nolan,carrier,goodTo,badTo,target,activeArea:focusedDutyArea(row,activeArea,nolan,carrier,target),actors:completeMatch(active,index)};
-}
-
-function dutyGoodAnimation(row:InventoryRow,index:number,l:ReturnType<typeof layout>):AnimationStep[]{
-  const family=dutyFamily(row),{nolan,carrier,goodTo,target}=l,far=p(Math.min(88,target.x+7),target.y),goal=p(97,32);
-  if(family==='gk-organize')return[step(0,700,'scan','nolan',nolan,nolan),step(300,1200,'run','blue1',p(22,20),p(15,38)),step(1000,1200,'cross','redBall',carrier,p(15,38)),step(2000,700,'clear','blue1',p(15,38),p(39,52)),step(3000,500,'celebrate','nolan',undefined,undefined,'happy')];
-  if(family==='gk-distribute')return[step(0,600,'catch','nolan',nolan,nolan),step(700,600,'scan','nolan',nolan,nolan),step(1400,1000,'pass','nolan',nolan,target),step(2300,500,'receive','blue2',target,target),step(2800,1000,'dribble','blue2',target,p(48,target.y))];
-  if(family==='gk-sweep')return[step(0,1400,'run','nolan',nolan,p(24,32)),step(200,1500,'dribble','redBall',carrier,p(27,34)),step(1500,700,'clear','nolan',p(24,32),p(40,10)),step(2400,900,'run','nolan',p(24,32),p(9,32)),step(3300,500,'celebrate','blue1',undefined,undefined,'happy')];
-  if(family==='gk-cross')return[step(0,1200,'cross','redBall',carrier,p(13,34)),step(400,1200,'run','nolan',nolan,p(13,34)),step(1500,700,row.decision.toLowerCase().includes('punch')?'parry':'catch','nolan',p(13,34),p(13,34)),step(2300,900,'pass','nolan',p(13,34),target),step(3200,500,'receive','blue2',target,target)];
-  if(family==='gk-shot')return[step(0,700,'set','nolan',nolan,p(10,32)),step(600,800,'shoot','redBall',carrier,p(6,index%2?27:38)),step(1000,800,'dive','nolan',p(10,32),p(7,index%2?27:38)),step(1600,600,row.decision.toLowerCase().includes('parry')?'parry':'catch','nolan',p(7,index%2?27:38),p(14,index%2?18:50)),step(2700,600,'celebrate','blue1',undefined,undefined,'happy')];
-  if(l.defending){
-    if(family==='press')return[step(0,1100,'press','nolan',nolan,goodTo),step(300,1400,'dribble','redBall',carrier,p(goodTo.x+4,goodTo.y)),step(1300,700,'block','nolan',goodTo,p(goodTo.x+2,goodTo.y)),step(2000,900,'pass','redBall',carrier,p(carrier.x+8,carrier.y+10)),step(2700,700,'defend','blue1',undefined,p(goodTo.x-5,goodTo.y+9)),step(3300,500,'celebrate','nolan',undefined,undefined,'happy')];
-    if(family==='cover'||family==='set-piece')return[step(0,1400,'run','red2',undefined,p(carrier.x-8,target.y)),step(300,1300,family==='set-piece'?'cross':'pass','redBall',carrier,p(carrier.x-8,target.y)),step(500,1300,'run','nolan',nolan,goodTo),step(1700,700,'block','nolan',goodTo,goodTo),step(2300,900,'clear','nolan',goodTo,target),step(3200,500,'celebrate','blue1',undefined,undefined,'happy')];
-    return[step(0,1500,'dribble','redBall',carrier,p(carrier.x-8,carrier.y)),step(200,1300,'defend','nolan',nolan,goodTo),step(700,1700,'run','blue1',undefined,p(goodTo.x-5,goodTo.y+8)),step(1700,800,'turn','redBall',p(carrier.x-8,carrier.y),p(carrier.x+2,carrier.y-8)),step(2500,800,'pass','redBall',p(carrier.x+2,carrier.y-8),p(carrier.x+12,carrier.y-10)),step(3300,500,'celebrate','nolan',undefined,undefined,'happy')];
-  }
-  if(family==='cross')return[step(0,700,'pass','blue1',carrier,nolan),step(600,500,'receive','nolan',nolan,nolan),step(1000,1000,'dribble','nolan',nolan,goodTo),step(1900,900,'cross','nolan',goodTo,target),step(2700,700,'shoot','blue2',target,goal),step(3400,500,'celebrate','nolan',undefined,undefined,'happy')];
-  if(family==='finish')return[step(0,1100,'run','nolan',nolan,goodTo),step(500,900,'pass','blue1',carrier,goodTo),step(1300,500,'receive','nolan',goodTo,goodTo),step(1900,800,'shoot','nolan',goodTo,goal),step(2800,600,'celebrate','blue2',undefined,undefined,'happy')];
-  if(family==='receive')return[step(0,600,index%2?'scan':'turn','nolan',nolan,nolan),step(500,900,'pass','blue1',carrier,nolan),step(1300,500,'receive','nolan',nolan,goodTo),step(1800,700,'turn','nolan',goodTo,p(goodTo.x+3,goodTo.y)),step(2400,900,'pass','nolan',p(goodTo.x+3,goodTo.y),target),step(3200,500,'receive','blue2',target,target)];
-  if(family==='combine')return[step(0,700,'pass','nolan',nolan,target),step(300,1500,'run','nolan',nolan,goodTo),step(700,500,'receive','blue2',target,target),step(1300,700,'pass','blue2',target,goodTo),step(2000,500,'receive','nolan',goodTo,goodTo),step(2600,700,index%2?'shoot':'pass','nolan',goodTo,index%2?goal:far),step(3300,500,'celebrate','blue2',undefined,undefined,'happy')];
-  if(family==='switch')return[step(0,700,'scan','nolan',nolan,nolan),step(500,700,'pass','blue1',carrier,nolan),step(1200,500,'receive','nolan',nolan,nolan),step(1700,1200,'pass','nolan',nolan,target),step(2800,500,'receive','blue2',target,target),step(3200,900,'dribble','blue2',target,far)];
-  if(family==='hold')return[step(0,800,'pass','blue1',carrier,nolan),step(700,500,'receive','nolan',nolan,nolan),step(1100,1300,'shield','nolan',nolan,goodTo),step(900,1500,'run','blue2',target,far),step(2300,800,'pass','nolan',goodTo,far),step(3100,500,'receive','blue2',far,far)];
-  if(family==='carry')return[step(0,500,'receive','nolan',nolan,nolan),step(400,1500,'dribble','nolan',nolan,goodTo),step(700,1300,'defend','red1',undefined,p(goodTo.x+3,goodTo.y)),step(1900,800,'pass','nolan',goodTo,target),step(2700,500,'receive','blue2',target,target),step(3200,700,'shoot','blue2',target,goal)];
-  if(family==='move')return[step(0,1500,'run','nolan',nolan,goodTo),step(300,1200,'defend','red1',undefined,p(goodTo.x-3,goodTo.y+4)),step(900,900,'pass','blue1',carrier,goodTo),step(1700,500,'receive','nolan',goodTo,goodTo),step(2300,800,'pass','nolan',goodTo,target),step(3100,500,'receive','blue2',target,target)];
-  return[step(0,600,index%2?'scan':'run','nolan',nolan,goodTo),step(500,800,'pass','blue1',carrier,goodTo),step(1200,500,'receive','nolan',goodTo,goodTo),step(1800,900,'pass','nolan',goodTo,target),step(2600,500,'receive','blue2',target,target),step(3100,800,'dribble','blue2',target,far)];
-}
-
-function dutyPoorAnimation(row:InventoryRow,index:number,l:ReturnType<typeof layout>):AnimationStep[]{
-  const family=dutyFamily(row),{nolan,carrier,badTo,target}=l,blueGoal=p(3,32);
-  if(family.startsWith('gk-')){if(family==='gk-distribute')return[step(0,700,'catch','nolan',nolan,nolan),step(800,900,'pass','nolan',nolan,p(28,32)),step(1500,500,'receive','red2',p(28,32),p(27,32)),step(2100,800,'shoot','red2',p(27,32),blueGoal),step(2900,600,'react','nolan',undefined,undefined,'worried')];if(family==='gk-cross'||family==='gk-organize')return[step(0,900,'walk','nolan',nolan,p(7,32)),step(500,1200,'cross','redBall',carrier,p(13,38)),step(1600,500,'receive','red2',p(13,38),p(12,38)),step(2200,700,'shoot','red2',p(12,38),blueGoal),step(2900,600,'react','nolan',undefined,undefined,'worried')];if(family==='gk-sweep')return[step(0,1200,'walk','nolan',nolan,p(15,32)),step(300,1500,'dribble','redBall',carrier,p(18,34)),step(1700,800,'shoot','redBall',p(18,34),blueGoal),step(2600,600,'react','nolan',undefined,undefined,'worried')];return[step(0,800,'shoot','redBall',carrier,p(8,32)),step(500,800,'dive','nolan',nolan,p(8,32)),step(1100,600,'parry','nolan',p(8,32),p(19,34)),step(1800,700,'shoot','red2',p(19,34),blueGoal),step(2700,600,'react','nolan',undefined,undefined,'worried')]}
-  if(l.defending){if(family==='press')return[step(0,1200,'walk','nolan',nolan,badTo),step(300,1500,'dribble','redBall',carrier,p(carrier.x-10,carrier.y)),step(1500,800,'pass','redBall',p(carrier.x-10,carrier.y),p(carrier.x-18,target.y)),step(2200,500,'receive','red2',p(carrier.x-18,target.y),p(carrier.x-19,target.y)),step(2800,800,'shoot','red2',p(carrier.x-19,target.y),blueGoal),step(3400,500,'react','nolan',undefined,undefined,'worried')];if(family==='cover'||family==='set-piece')return[step(0,1200,'run','nolan',nolan,badTo),step(200,1500,'run','red2',undefined,p(carrier.x-14,target.y)),step(700,1100,family==='set-piece'?'cross':'pass','redBall',carrier,p(carrier.x-14,target.y)),step(1800,500,'receive','red2',p(carrier.x-14,target.y),p(carrier.x-15,target.y)),step(2400,800,'shoot','red2',p(carrier.x-15,target.y),blueGoal),step(3200,500,'react','nolan',undefined,undefined,'worried')];return[step(0,900,'defend','nolan',nolan,badTo),step(400,1600,'dribble','redBall',carrier,p(carrier.x-14,carrier.y)),step(1700,700,'pass','redBall',p(carrier.x-14,carrier.y),p(carrier.x-20,target.y)),step(2400,700,'shoot','red2',p(carrier.x-20,target.y),blueGoal),step(3200,500,'react','nolan',undefined,undefined,'worried')]}
-  if(family==='combine')return[step(0,700,'pass','nolan',nolan,target),step(500,1300,'walk','nolan',nolan,badTo),step(900,800,'pass','blue2',target,goodPoint(badTo)),step(1700,700,'defend','red1',undefined,goodPoint(badTo)),step(2400,1000,'dribble','red1',goodPoint(badTo),p(35,36)),step(3300,500,'react','nolan',undefined,undefined,'worried')];
-  const loseAt=badTo;return[step(0,1100,family==='receive'?'turn':family==='hold'?'dribble':'run','nolan',nolan,loseAt),step(600,800,'pass','blue1',carrier,loseAt),step(1300,700,'defend','red1',undefined,loseAt),step(2000,1100,'dribble','red1',loseAt,p(35,index%2?23:43)),step(2900,600,'run','red2',undefined,p(43,index%2?45:20)),step(3400,500,'react','nolan',undefined,undefined,'worried')];
-}
-
-const goodPoint=(point:Point)=>p(point.x+1,point.y);
-
-function goodAnimation(row:InventoryRow,index:number,l:ReturnType<typeof layout>):AnimationStep[]{
-  const {nolan,carrier,goodTo,target}=l;
-  if(!reviewedCoreIds.has(row.id))return dutyGoodAnimation(row,index,l);
-  if(row.id==='TW-09')return[step(0,1400,'run','nolan',nolan,p(67,32)),step(0,1500,'run','blue2',target,p(72,52)),step(300,900,'pass','blue1',carrier,p(67,32)),step(1300,500,'receive','nolan',p(67,32),p(68,32)),step(1900,800,'pass','nolan',p(68,32),p(72,52)),step(2600,800,'shoot','blue2',p(72,52),p(97,34)),step(3300,500,'celebrate','nolan',undefined,undefined,'happy')];
-  if(row.id==='FB-03')return[step(0,1600,'run','nolan',nolan,p(76,12)),step(300,1200,'shield','blue2',target,p(67,22)),step(700,1900,'run','blue1',carrier,p(84,38)),step(1300,700,'pass','blue2',p(67,22),p(76,12)),step(2000,500,'receive','nolan',p(76,12),p(77,12)),step(2500,900,'cross','nolan',p(77,12),p(84,38)),step(3400,600,'shoot','blue1',p(84,38),p(97,32))];
-  if(row.id==='TW-02')return[step(0,1200,'run','nolan',nolan,p(43,31)),step(0,1200,'run','blue2',target,p(53,48)),step(600,800,'pass','blue1',carrier,p(43,31)),step(1300,500,'receive','nolan',p(43,31),p(44,31)),step(1800,800,'pass','nolan',p(44,31),p(53,48)),step(2500,700,'pass','blue2',p(53,48),p(69,34)),step(3200,500,'celebrate','blue1',undefined,undefined,'happy')];
-  if(row.id==='TW-07')return[step(0,1500,'defend','nolan',nolan,p(28,32)),step(200,1800,'dribble','redBall',carrier,p(31,30)),step(900,1800,'run','blue1',p(24,45),p(27,37)),step(1900,900,'turn','redBall',p(31,30),p(40,22)),step(2600,700,'defend','blue1',p(27,37),p(32,30)),step(3300,500,'celebrate','nolan',undefined,undefined,'happy')];
-  if(row.id==='GK-01')return[step(0,900,'set','nolan',nolan,p(12,32)),step(700,900,'shoot','redBall',carrier,p(4,27)),step(1200,900,'dive','nolan',p(12,32),p(8,27)),step(1300,700,'block','nolan',p(8,27),p(19,20)),step(2500,600,'celebrate','blue1',undefined,undefined,'happy')];
-  if(row.id==='GK-02')return[step(0,1600,'run','nolan',nolan,p(23,32)),step(300,1500,'dribble','redBall',carrier,p(25,34)),step(1500,800,'clear','nolan',p(23,32),p(36,10)),step(2400,900,'run','nolan',p(23,32),p(11,32)),step(3300,500,'celebrate','blue1',undefined,undefined,'happy')];
-  if(row.id==='GK-03')return[step(0,900,'shoot','redBall',carrier,p(6,35)),step(500,900,'dive','nolan',nolan,p(7,36)),step(900,700,'parry','nolan',p(7,36),p(13,56)),step(1800,900,'run','blue1',p(22,20),p(16,48)),step(2800,500,'celebrate','blue1',undefined,undefined,'happy')];
-  if(row.id==='GK-04')return[step(0,700,'catch','nolan',nolan,nolan),step(800,500,'scan','nolan',nolan,p(9,31)),step(1400,1000,'pass','nolan',p(9,31),target),step(2300,500,'receive','blue2',target,p(target.x+1,target.y)),step(2800,1100,'dribble','blue2',target,p(48,52))];
-  if(row.id==='GK-05')return[step(0,700,'scan','nolan',nolan,p(9,31)),step(300,1100,'run','blue1',p(22,20),p(15,42)),step(1200,1100,'cross','redBall',carrier,p(15,42)),step(2100,800,'clear','blue1',p(15,42),p(39,54)),step(3000,600,'celebrate','nolan',undefined,undefined,'happy')];
-  if(row.id==='GK-06')return[step(0,1200,'cross','redBall',carrier,p(13,32)),step(500,1200,'run','nolan',nolan,p(13,32)),step(1500,700,'catch','nolan',p(13,32),p(13,32)),step(2200,900,'run','nolan',p(13,32),p(8,32)),step(3100,500,'celebrate','blue1',undefined,undefined,'happy')];
-  if(row.id==='GK-07')return[step(0,700,'shoot','redBall',carrier,p(7,27)),step(400,700,'dive','nolan',nolan,p(7,27)),step(900,600,'parry','nolan',p(7,27),p(18,38)),step(1400,700,'set','nolan',p(7,27),p(9,32)),step(1900,700,'shoot','red2',p(18,38),p(5,36)),step(2100,700,'dive','nolan',p(9,32),p(6,36)),step(2600,700,'catch','nolan',p(6,36),p(6,36)),step(3300,500,'celebrate','blue1',undefined,undefined,'happy')];
-  if(row.id.startsWith('GK-')){const style=index%6;if(style===0)return[step(0,700,'set','nolan',nolan,p(10,32)),step(600,800,'shoot','redBall',carrier,p(5,28)),step(1000,800,'dive','nolan',p(10,32),p(6,28)),step(1500,600,'block','nolan',p(6,28),p(19,18)),step(2600,600,'celebrate','blue1',undefined,undefined,'happy')];if(style===1)return[step(0,1200,'cross','redBall',carrier,p(13,34)),step(500,1100,'run','nolan',nolan,p(13,34)),step(1500,700,'catch','nolan',p(13,34),p(13,34)),step(2400,800,'pass','nolan',p(13,34),target),step(3200,500,'receive','blue2',target,target)];if(style===2)return[step(0,800,'shoot','redBall',carrier,p(6,38)),step(400,800,'dive','nolan',nolan,p(7,38)),step(1000,600,'parry','nolan',p(7,38),p(14,55)),step(1900,900,'run','nolan',p(7,38),p(8,32)),step(3000,500,'celebrate','blue1',undefined,undefined,'happy')];if(style===3)return[step(0,700,'catch','nolan',nolan,nolan),step(800,600,'scan','nolan',nolan,p(9,31)),step(1500,1000,'pass','nolan',p(9,31),target),step(2400,500,'receive','blue2',target,target),step(2900,1000,'dribble','blue2',target,p(49,target.y))];if(style===4)return[step(0,1500,'run','nolan',nolan,p(24,32)),step(300,1500,'dribble','redBall',carrier,p(26,34)),step(1500,800,'clear','nolan',p(24,32),p(39,9)),step(2500,900,'run','nolan',p(24,32),p(9,32)),step(3400,500,'celebrate','blue1',undefined,undefined,'happy')];return[step(0,700,'set','nolan',nolan,p(9,32)),step(600,800,'shoot','redBall',carrier,p(7,34)),step(1000,800,'dive','nolan',p(9,32),p(7,34)),step(1500,600,'catch','nolan',p(7,34),p(7,34)),step(2500,900,'pass','nolan',p(7,34),target)];}
-  if(row.id==='AM-04')return[step(0,700,'pass','nolan',nolan,target),step(400,1500,'run','nolan',nolan,p(79,31)),step(700,500,'receive','blue2',target,target),step(1300,700,'pass','blue2',target,p(79,31)),step(2000,500,'receive','nolan',p(79,31),p(80,31)),step(2500,700,'shoot','nolan',p(80,31),p(97,32)),step(3200,500,'celebrate','blue2',undefined,undefined,'happy')];
-  if(row.id==='WNG-04'){const endLine=p(84,nolan.y<32?10:54),cutback=p(75,nolan.y<32?24:40);return[step(0,1500,'dribble','nolan',nolan,endLine),step(500,1200,'run','blue2',target,cutback),step(700,1200,'defend','red1',undefined,p(81,nolan.y<32?18:46)),step(1500,900,'cross','nolan',endLine,cutback),step(2300,500,'receive','blue2',cutback,cutback),step(2800,800,'shoot','blue2',cutback,p(97,32)),step(3500,500,'celebrate','nolan',undefined,undefined,'happy')]}
-  if(crossers.has(row.id))return[step(0,1100,'dribble','nolan',nolan,goodTo),step(900,1000,'cross','nolan',goodTo,target),step(1800,500,'receive','blue2',target,target),step(2300,800,'shoot','blue2',target,p(97,32)),step(3000,600,'celebrate','nolan',undefined,undefined,'happy')];
-  if(passFinishers.has(row.id))return[step(0,800,'run','blue2',target,p(82,38)),step(300,900,'pass','nolan',nolan,p(82,38)),step(1200,500,'receive','blue2',p(82,38),p(83,38)),step(1900,700,'shoot','blue2',p(83,38),p(97,32)),step(2800,600,'celebrate','nolan',undefined,undefined,'happy')];
-  if(finishers.has(row.id))return[step(0,1200,'run','nolan',nolan,goodTo),step(600,900,'pass','blue1',carrier,goodTo),step(1400,500,'receive','nolan',goodTo,goodTo),step(2000,800,'shoot','nolan',goodTo,p(97,32)),step(2900,600,'celebrate','blue2',undefined,undefined,'happy')];
-  return dutyGoodAnimation(row,index,l);
-}
-
-function poorAnimation(row:InventoryRow,index:number,l:ReturnType<typeof layout>):AnimationStep[]{
-  const {nolan,carrier,badTo,target}=l;const text=row.poor.toLowerCase();
-  if(!reviewedCoreIds.has(row.id))return dutyPoorAnimation(row,index,l);
-  if(row.id==='GK-01'||row.id==='GK-02')return[step(0,1100,'walk','nolan',nolan,badTo),step(400,1300,'dribble','redBall',carrier,p(18,36)),step(1700,800,'shoot','redBall',p(18,36),p(3,32)),step(2300,600,'react','nolan',undefined,undefined,'worried')];
-  if(row.id==='GK-03')return[step(0,800,'shoot','redBall',carrier,p(8,32)),step(500,900,'dive','nolan',nolan,p(8,32)),step(1000,600,'parry','nolan',p(8,32),p(20,32)),step(1700,700,'shoot','red2',p(20,32),p(3,32)),step(2500,600,'react','nolan',undefined,undefined,'worried')];
-  if(row.id==='GK-04')return[step(0,700,'catch','nolan',nolan,nolan),step(900,900,'pass','nolan',nolan,p(29,32)),step(1500,500,'receive','red2',p(29,32),p(28,32)),step(2100,800,'shoot','red2',p(28,32),p(3,32)),step(2700,600,'react','nolan',undefined,undefined,'worried')];
-  if(row.id==='GK-05')return[step(0,800,'walk','nolan',nolan,p(8,34)),step(800,1100,'cross','redBall',carrier,p(14,43)),step(1600,700,'receive','red2',p(14,43),p(13,42)),step(2200,700,'shoot','red2',p(13,42),p(3,34)),step(2800,600,'react','nolan',undefined,undefined,'worried')];
-  if(row.id==='GK-06')return[step(0,900,'walk','nolan',nolan,p(7,32)),step(500,1200,'cross','redBall',carrier,p(13,34)),step(1600,500,'receive','red2',p(13,34),p(12,35)),step(2200,700,'shoot','red2',p(12,35),p(3,32)),step(2800,600,'react','nolan',undefined,undefined,'worried')];
-  if(row.id==='GK-07')return[step(0,700,'shoot','redBall',carrier,p(7,27)),step(400,700,'dive','nolan',nolan,p(7,27)),step(900,600,'parry','nolan',p(7,27),p(18,38)),step(1500,900,'walk','nolan',p(7,27),p(8,29)),step(1700,700,'shoot','red2',p(18,38),p(3,36)),step(2400,600,'react','nolan',undefined,undefined,'worried')];
-  if(row.id.startsWith('GK-')){const style=index%4;if(style===0)return[step(0,900,'walk','nolan',nolan,p(7,34)),step(500,900,'shoot','redBall',carrier,p(3,27)),step(1800,600,'react','nolan',undefined,undefined,'worried'),step(2700,600,'react','blue1',undefined,undefined,'worried')];if(style===1)return[step(0,1100,'cross','redBall',carrier,p(14,37)),step(700,900,'walk','nolan',nolan,p(7,32)),step(1500,500,'receive','red2',p(14,37),p(13,37)),step(2100,700,'shoot','red2',p(13,37),p(3,33)),step(2800,600,'react','nolan',undefined,undefined,'worried')];if(style===2)return[step(0,800,'shoot','redBall',carrier,p(7,31)),step(500,800,'dive','nolan',nolan,p(7,31)),step(1000,600,'parry','nolan',p(7,31),p(19,34)),step(1700,700,'shoot','red2',p(19,34),p(3,35)),step(2600,600,'react','nolan',undefined,undefined,'worried')];return[step(0,700,'catch','nolan',nolan,nolan),step(900,900,'pass','nolan',nolan,p(28,32)),step(1500,500,'receive','red2',p(28,32),p(27,32)),step(2100,800,'shoot','red2',p(27,32),p(3,32)),step(2800,600,'react','nolan',undefined,undefined,'worried')];}
-  if(text.includes('offside'))return[step(0,1500,'run','nolan',nolan,p(86,nolan.y)),step(800,900,'pass','blue1',carrier,p(86,nolan.y)),step(1700,700,'walk','red1',undefined,p(81,34)),step(2400,600,'react','nolan',undefined,undefined,'surprised')];
-  if(text.includes('goalkeeper')||text.includes('hands')||text.includes('held'))return[step(0,1000,'run','nolan',nolan,badTo),step(900,1100,'cross','nolan',badTo,p(91,32)),step(1900,700,'catch','redGK',p(92,32),p(91,32)),step(2700,600,'react','nolan',undefined,undefined,'worried')];
-  if(l.defending&&(text.includes('shot')||text.includes('scores')||text.includes('goal')||text.includes('finish')))return[step(0,1100,'run','nolan',nolan,badTo),step(300,1300,'dribble','redBall',carrier,p(22,35)),step(1300,700,'pass','redBall',p(22,35),p(17,42)),step(2000,500,'receive','red2',p(17,42),p(16,40)),step(2500,800,'shoot','red2',p(16,40),p(3,32)),step(3000,500,'react','nolan',undefined,undefined,'worried')];
-  return dutyPoorAnimation(row,index,l);
-}
-
-function alternateAnimation(row:InventoryRow,l:ReturnType<typeof layout>):AnimationStep[]{const alt=p(Math.min(88,l.goodTo.x+5),Math.max(9,58-l.goodTo.y));if(row.id==='GK-04')return[step(0,700,'catch','nolan',l.nolan,l.nolan),step(800,600,'scan','nolan',l.nolan,p(9,34)),step(1500,1100,'pass','nolan',p(9,34),p(34,14)),step(2500,500,'receive','blue1',p(34,14),p(35,14)),step(3000,900,'dribble','blue1',p(35,14),p(48,17))];if(l.defending)return[step(0,1100,'run','nolan',l.nolan,alt),step(500,1200,'defend','blue1',p(24,40),p(29,34)),step(1500,800,'pass','blue1',p(29,34),alt),step(2300,800,'clear','nolan',alt,p(46,54)),step(3100,500,'celebrate','blue1',undefined,undefined,'happy')];return[step(0,1000,'run','nolan',l.nolan,alt),step(600,900,'pass','blue1',l.carrier,alt),step(1400,500,'receive','nolan',alt,alt),step(1900,900,'pass','nolan',alt,l.target),step(2700,500,'receive','blue2',l.target,l.target),step(3100,700,'celebrate','blue1',undefined,undefined,'happy')];}
-
-const clampPoint=(point:Point)=>p(Math.max(5,Math.min(95,point.x)),Math.max(8,Math.min(56,point.y)));
-function supportingSetupSteps(actors:AnimatedActor[],defending:boolean):AnimationStep[]{return actors.filter((item)=>item.id.startsWith('support-')&&!item.goalkeeper).map((item,index)=>{const attacking=item.team===(defending?'red':'blue'),dx=attacking?-2.8:2.2,dy=item.start.y<32?2.2:-2.2;return step(350+(index%4)*260,1500,attacking?'run':'defend',item.id,item.start,clampPoint(p(item.start.x+dx,item.start.y+dy)))})}
-function supportingReactionSteps(actors:AnimatedActor[],defending:boolean,quality:'good'|'poor'):AnimationStep[]{return actors.filter((item)=>item.id.startsWith('support-')&&!item.goalkeeper).map((item,index)=>{const blueAdvantage=quality==='good',dx=blueAdvantage?(item.team==='blue'?4:2):(item.team==='red'?-5:-3.5),towardBall=item.start.y<32?3:-3;const action=item.team===(blueAdvantage?'red':'blue')?'defend':'run';return step(250+(index%4)*380,1800,action,item.id,undefined,clampPoint(p(item.start.x+dx,item.start.y+towardBall)))})}
-
-function distanceFromLane(point:Point,start:Point,end:Point){const dx=end.x-start.x,dy=end.y-start.y,length=dx*dx+dy*dy;if(!length)return{distance:99,progress:0};const progress=Math.max(0,Math.min(1,((point.x-start.x)*dx+(point.y-start.y)*dy)/length)),x=start.x+progress*dx,y=start.y+progress*dy;return{distance:Math.hypot(point.x-x,point.y-y),progress}}
-function prepareClearBestPaths(actors:AnimatedActor[],ballStart:Point,setup:AnimationStep[],rawSteps:AnimationStep[]){const hasEarlyBlueKick=rawSteps.some((item)=>item.startTime<550&&item.actorId&&actors.find((actor)=>actor.id===item.actorId)?.team==='blue'&&['pass','cross','clear','shoot'].includes(item.action)),steps=rawSteps.map((item)=>({...item,startTime:item.startTime+(hasEarlyBlueKick?700:0)})),frame=finalFrame(actors,ballStart,setup),positions=Object.fromEntries(Object.entries(frame.actors).map(([id,value])=>[id,{...value.position}]));let ball={...frame.ball};const openings:AnimationStep[]=[];for(const item of [...steps].sort((a,b)=>a.startTime-b.startTime)){const kicker=item.actorId?actors.find((actor)=>actor.id===item.actorId):undefined;if(kicker?.team==='blue'&&item.to&&['pass','cross','clear','shoot'].includes(item.action)){const from=item.from??ball,to=item.to,dx=to.x-from.x,dy=to.y-from.y,length=Math.max(1,Math.hypot(dx,dy)),perpendicular=p(-dy/length,dx/length);actors.filter((actor)=>actor.team==='red'&&!(item.action==='shoot'&&actor.goalkeeper)).forEach((actor,actorIndex)=>{const lane=distanceFromLane(positions[actor.id]??actor.start,from,to);if(lane.progress>.14&&lane.progress<.9&&lane.distance<3.4){const current=positions[actor.id]??actor.start,side=(current.x-from.x)*perpendicular.x+(current.y-from.y)*perpendicular.y||((actorIndex%2)*2-1),destination=clampPoint(p(current.x+perpendicular.x*11.5*Math.sign(side),current.y+perpendicular.y*11.5*Math.sign(side)));openings.push(step(Math.max(0,item.startTime-100),650,'defend',actor.id,current,destination));steps.filter((next)=>next.actorId===actor.id&&next.startTime>=item.startTime-200&&next.startTime<=item.startTime+100).forEach((next)=>{next.startTime=item.startTime+item.duration+120});positions[actor.id]=destination}})}if(item.actorId&&item.to&&!['pass','shoot','cross','clear','parry','block','celebrate','react'].includes(item.action))positions[item.actorId]={...item.to};if(item.to&&['pass','shoot','dribble','receive','cross','clear','catch','parry','block'].includes(item.action))ball={...item.to}}return[...steps,...openings]}
-
-function makeScene(row:InventoryRow,index:number):AnimatedScenario{
-  const meta=metadata[row.id];
-  if(!meta)throw new Error(`Missing scene metadata for ${row.id}`);
-  const l=layout(row,index),redStart=l.actors.find((item)=>item.id==='red1')?.start;
-  const activeSetup:AnimationStep[]=l.defending
-    ?[step(200,2200,'dribble','redBall',p(l.carrier.x+10,l.carrier.y),l.carrier),step(700,1800,'run','red2',p(l.carrier.x+8,50),p(l.carrier.x-8,42)),step(1100,1700,'defend','blue1',p(21,45),p(24,40)),step(2800,500,'react','nolan',undefined,undefined,'surprised')]
-    :[step(200,2200,'dribble','blue1',p(l.carrier.x-10,l.carrier.y+2),l.carrier),step(700,1800,'defend','red1',redStart?p(redStart.x+7,redStart.y):p(70,34),redStart??p(62,34)),step(1100,1700,'run','blue2',p(l.target.x-8,l.target.y),l.target),step(2800,500,'scan','nolan',l.nolan,l.nolan)];
-  const setup=repairAnimationGeometry(l.actors,l.carrier,[...activeSetup,...supportingSetupSteps(l.actors,l.defending)]);
-  const buildSteps=(label:string,quality:'good'|'poor',raw:AnimationStep[])=>{
-    const semantic=ensurePhoneReadableSteps(label,enforceOptionResult(label,quality,l,raw),l);
-    const reactions=[...semantic,...supportingReactionSteps(l.actors,l.defending,quality)];
-    if(quality==='poor')return ensurePhoneReadableSteps(label,repairAnimationGeometry(l.actors,l.carrier,reactions,setup),l);
-    const opened=prepareClearBestPaths(l.actors,l.carrier,setup,reactions);
-    const cleared=prepareClearBestPaths(l.actors,l.carrier,setup,repairAnimationGeometry(l.actors,l.carrier,opened,setup));
-    return ensurePhoneReadableSteps(label,repairAnimationGeometry(l.actors,l.carrier,cleared,setup),l);
-  };
-  let goodSteps=buildSteps(meta.goodLabel,'good',goodAnimation(row,index,l));
-  let poorSteps=buildSteps(meta.poorLabel,'poor',poorAnimation(row,index,l));
-  let goodChoice=alignChoicePreview(semanticChoice('good',meta.goodLabel,meta.icon,'good',l,goodSteps,poorSteps),goodSteps,l);
-  let poorChoice=alignChoicePreview(semanticChoice('poor',meta.poorLabel,'🤔','poor',l,poorSteps,goodSteps),poorSteps,l);
-  ({choice:goodChoice,steps:goodSteps}=synchronizeReadableChoice(goodChoice,goodSteps,l));
-  ({choice:poorChoice,steps:poorSteps}=synchronizeReadableChoice(poorChoice,poorSteps,l));
-  if(visuallySameOnPhone(goodChoice,poorChoice)){
-    poorSteps=repairAnimationGeometry(l.actors,l.carrier,contrastSteps(poorSteps,goodChoice,l),setup);
-    poorChoice=alignChoicePreview(semanticChoice('poor',meta.poorLabel,'🤔','poor',l,poorSteps,goodSteps),poorSteps,l);
-    goodChoice=alignChoicePreview(semanticChoice('good',meta.goodLabel,meta.icon,'good',l,goodSteps,poorSteps),goodSteps,l);
-    ({choice:goodChoice,steps:goodSteps}=synchronizeReadableChoice(goodChoice,goodSteps,l));
-    ({choice:poorChoice,steps:poorSteps}=synchronizeReadableChoice(poorChoice,poorSteps,l));
-  }
-  goodSteps=repairAnimationGeometry(l.actors,l.carrier,prepareClearBestPaths(l.actors,l.carrier,setup,goodSteps),setup);
-  goodChoice=alignChoicePreview(semanticChoice('good',meta.goodLabel,meta.icon,'good',l,goodSteps,poorSteps),goodSteps,l);
-  ({choice:goodChoice,steps:goodSteps}=synchronizeReadableChoice(goodChoice,goodSteps,l));
-  goodSteps=repairAnimationGeometry(l.actors,l.carrier,goodSteps,setup);
-  if(row.id==='TW-03')goodSteps=appendSafeExit('red2',goodSteps,l,setup);
-  const alternateLabel=alternateLabels[row.id];
-  let alternateSteps=alternateLabel?buildSteps(alternateLabel,'good',alternateAnimation(row,l)):undefined;
-  let alternateChoice=alternateSteps&&alternateLabel?alignChoicePreview(semanticChoice('alternate',alternateLabel,'✅','good',l,alternateSteps,goodSteps),alternateSteps,l):undefined;
-  if(alternateSteps&&alternateChoice)({choice:alternateChoice,steps:alternateSteps}=synchronizeReadableChoice(alternateChoice,alternateSteps,l));
-  if(alternateSteps&&alternateChoice&&(visuallySameOnPhone(goodChoice,alternateChoice)||visuallySameOnPhone(poorChoice,alternateChoice))){
-    alternateSteps=prepareClearBestPaths(l.actors,l.carrier,setup,repairAnimationGeometry(l.actors,l.carrier,contrastSteps(alternateSteps,goodChoice,l,true),setup));
-    alternateChoice=alignChoicePreview(semanticChoice('alternate',alternateLabel!,'✅','good',l,alternateSteps,goodSteps),alternateSteps,l);
-  }
-  const choices=[goodChoice,...(alternateChoice?[alternateChoice]:[]),poorChoice];
-  const results=[result('good','best',row.good,row.decision,row.good,goodSteps),...(alternateSteps?[result('alternate','good',`Good option. ${row.good}`,row.decision,'The team also stays safe with this choice.',alternateSteps)]:[]),result('poor','poor',row.poor,`Try this instead: ${row.decision}`,row.poor,poorSteps)];
-  return{id:row.id,title:meta.title,category:categoryFor(row.id),role:row.role,stage:(1+Math.floor((index%8)/3)) as SceneStage,formalConcept:row.decision,skillId:skillIdFor(row),visibleCue:row.trigger,playerDuty:row.decision,introNarration:`Watch. ${row.trigger}`,prompt:'What should Nolan do?',pauseTime:3800,activeArea:l.activeArea,ballStart:l.carrier,actors:l.actors,setupAnimation:setup,choices,results};
-}
-
-export const animatedScenarios=rows.map(makeScene);
-const packInfo:Record<SceneCategory,Omit<ScenePack,'id'|'scenes'>>={
-  winger:{name:'Winger Games',icon:'🪽',color:'#11a968',description:'Width, crossing, back-post runs, and tracking.'},
-  striker:{name:'Striker Games',icon:'🎯',color:'#f97316',description:'Finishing, movement, hold-up play, rebounds, and pressing.'},
-  'central-midfielder':{name:'Midfielder Games',icon:'🧭',color:'#8b5cf6',description:'Scan, switch, control tempo, support, and cover.'},
-  'attacking-midfielder':{name:'Attacking Midfielder Games',icon:'🪄',color:'#d946a8',description:'Find pockets, turn, create chances, and counterpress.'},
-  'defensive-midfielder':{name:'Defensive Midfielder Games',icon:'🚧',color:'#64748b',description:'Screen, cover, track runners, build, and delay counters.'},
-  fullback:{name:'Fullback Games',icon:'🏃',color:'#0ea5a0',description:'Defend wide, overlap, underlap, and recover.'},
-  'center-defender':{name:'Center Defender Games',icon:'🛡️',color:'#2583da',description:'Position, cover, control the line, and manage danger.'},
-  goalkeeper:{name:'Goalkeeper Games',icon:'🧤',color:'#e2a600',description:'Set angles, sweep, parry, and distribute.'},
-  teamwork:{name:'Teamwork Games',icon:'🤝',color:'#db4c8b',description:'Use space, combine, transition, and protect together.'},
+type FormationSlot = {
+  role: string;
+  position: Point;
+  number: number;
+  goalkeeper?: boolean;
 };
-export const scenePacks:ScenePack[]=(Object.keys(packInfo) as SceneCategory[]).map((id)=>({id,...packInfo[id],scenes:animatedScenarios.filter((scene)=>scene.category===id)}));
-export const sceneById=(id:string)=>animatedScenarios.find((scene)=>scene.id===id);
-export const packById=(id:string)=>scenePacks.find((pack)=>pack.id===id);
+const blueFormation: FormationSlot[] = [
+  { role: "Goalkeeper", position: p(8, 32), number: 1, goalkeeper: true },
+  { role: "Fullback", position: p(23, 20), number: 3 },
+  { role: "Center defender", position: p(23, 44), number: 4 },
+  { role: "Left winger", position: p(43, 14), number: 11 },
+  { role: "Central midfielder", position: p(40, 32), number: 8 },
+  { role: "Right winger", position: p(43, 50), number: 7 },
+  { role: "Striker", position: p(63, 32), number: 9 },
+];
+const redFormation: FormationSlot[] = [
+  { role: "Goalkeeper", position: p(92, 32), number: 1, goalkeeper: true },
+  { role: "Fullback", position: p(77, 44), number: 3 },
+  { role: "Center defender", position: p(77, 20), number: 4 },
+  { role: "Left winger", position: p(57, 50), number: 11 },
+  { role: "Central midfielder", position: p(60, 32), number: 8 },
+  { role: "Right winger", position: p(57, 14), number: 7 },
+  { role: "Striker", position: p(37, 32), number: 9 },
+];
+const roleFamily = (role: string) =>
+  role.toLowerCase().includes("goalkeeper")
+    ? "goalkeeper"
+    : role.toLowerCase().includes("defender") ||
+        role.toLowerCase().includes("fullback")
+      ? "defender"
+      : role.toLowerCase().includes("midfielder")
+        ? "midfielder"
+        : role.toLowerCase().includes("striker")
+          ? "striker"
+          : role.toLowerCase().includes("winger")
+            ? "winger"
+            : "player";
+function completeMatch(activeActors: AnimatedActor[], index: number) {
+  const completeTeam = (team: "blue" | "red", formation: FormationSlot[]) => {
+    const current = activeActors.filter((item) => item.team === team),
+      available = [...formation];
+    current.forEach((item) => {
+      const family = roleFamily(item.role);
+      let slotIndex = available.findIndex(
+        (slot) => roleFamily(slot.role) === family,
+      );
+      if (slotIndex < 0) slotIndex = 0;
+      available.splice(slotIndex, 1);
+    });
+    const shift = ((index % 3) - 1) * 0.35;
+    return [
+      ...current,
+      ...available.map((slot, slotIndex) =>
+        actor(
+          `support-${team}-${slotIndex}`,
+          team,
+          slot.role,
+          p(slot.position.x, slot.position.y + shift),
+          slot.number,
+          undefined,
+          Boolean(slot.goalkeeper),
+        ),
+      ),
+    ];
+  };
+  return spreadActorStarts([
+    ...completeTeam("blue", blueFormation),
+    ...completeTeam("red", redFormation),
+  ]);
+}
+
+function layout(row: InventoryRow, index: number) {
+  const category = categoryFor(row.id),
+    defending = defensiveIds.has(row.id) || row.assets.startsWith("defensive"),
+    goalkeeper = category === "goalkeeper";
+  const lane = index % 3;
+  const unique = (index + 1) / 1000;
+  const y = (lane === 0 ? 17 : lane === 1 ? 32 : 47) + unique;
+  const jitter = (index % 4) * 2 + unique;
+  const lineups: Record<
+    SceneCategory,
+    { blue1: string; blue2: string; red1: string; red2: string }
+  > = {
+    winger: {
+      blue1: "Central midfielder",
+      blue2: "Striker",
+      red1: "Fullback",
+      red2: "Center defender",
+    },
+    striker: {
+      blue1: "Attacking midfielder",
+      blue2: "Winger",
+      red1: "Center defender",
+      red2: "Center defender",
+    },
+    "central-midfielder": {
+      blue1: "Center defender",
+      blue2: "Winger",
+      red1: "Central midfielder",
+      red2: "Defensive midfielder",
+    },
+    "attacking-midfielder": {
+      blue1: "Central midfielder",
+      blue2: "Striker",
+      red1: "Defensive midfielder",
+      red2: "Center defender",
+    },
+    "defensive-midfielder": {
+      blue1: "Center defender",
+      blue2: "Fullback",
+      red1: "Attacking midfielder",
+      red2: "Striker",
+    },
+    fullback: {
+      blue1: "Winger",
+      blue2: "Central midfielder",
+      red1: "Winger",
+      red2: "Fullback",
+    },
+    "center-defender": {
+      blue1: "Fullback",
+      blue2: "Defensive midfielder",
+      red1: "Striker",
+      red2: "Attacking midfielder",
+    },
+    goalkeeper: {
+      blue1: "Center defender",
+      blue2: "Fullback",
+      red1: "Striker",
+      red2: "Winger",
+    },
+    teamwork: {
+      blue1: "Central midfielder",
+      blue2: "Winger",
+      red1: "Defender",
+      red2: "Striker",
+    },
+  };
+  const lineup = lineups[category];
+  const defensiveWideY = Math.max(5, Math.min(36, y - 11.5));
+  const areaByCategory: Record<
+    SceneCategory,
+    {
+      attack: [number, number, number, number, string];
+      defense: [number, number, number, number, string];
+    }
+  > = {
+    winger: {
+      attack: [50, index % 2 ? 36 : 5, 46, 23, "wide attack"],
+      defense: [28, defensiveWideY, 36, 23, "wide recovery"],
+    },
+    striker: {
+      attack: [65, 14, 31, 36, "scoring area"],
+      defense: [54, 12, 40, 40, "pressing area"],
+    },
+    "central-midfielder": {
+      attack: [25, 9, 50, 46, "middle third"],
+      defense: [16, 9, 46, 46, "central cover"],
+    },
+    "attacking-midfielder": {
+      attack: [48, 12, 40, 40, "between lines"],
+      defense: [47, 10, 42, 44, "counterpress"],
+    },
+    "defensive-midfielder": {
+      attack: [12, 9, 48, 46, "build-up base"],
+      defense: [8, 10, 45, 44, "screening zone"],
+    },
+    fullback: {
+      attack: [48, index % 2 ? 36 : 5, 45, 23, "overlap lane"],
+      defense: [3, defensiveWideY, 42, 23, "wide defense"],
+    },
+    "center-defender": {
+      attack: [5, 10, 48, 44, "build-up line"],
+      defense: [2, 12, 41, 40, "danger area"],
+    },
+    goalkeeper: {
+      attack: [1, 18, 25, 29, "goal area"],
+      defense: [1, 18, 25, 29, "goal area"],
+    },
+    teamwork: {
+      attack: [22, 8, 58, 48, "team shape"],
+      defense: [15, 8, 55, 48, "team defense"],
+    },
+  };
+  const [ax, ay, aw, ah, areaLabel] = defending
+    ? areaByCategory[category].defense
+    : areaByCategory[category].attack;
+  const areaShift = category === "goalkeeper" ? 0 : ((index % 3) - 1) * 1.5;
+  const activeArea = {
+    x: Math.max(0, Math.min(100 - aw, ax + areaShift)),
+    y: Math.max(4, Math.min(60 - ah, ay + (index % 2 ? 1.2 : -1.2))),
+    width: aw,
+    height: ah,
+    label: areaLabel,
+  };
+  if (goalkeeper) {
+    const nolan = p(8, 32),
+      redBall = p(38 + jitter, y),
+      red2 = p(28 + jitter, 48 - y / 3),
+      target = p(25, 14 + (index % 2) * 35),
+      active = [
+        actor("nolan", "blue", "Goalkeeper", nolan, 1, "Nolan", true),
+        actor("blue1", "blue", lineup.blue1, p(22, 20), 4),
+        actor("blue2", "blue", lineup.blue2, p(30, 51), 2),
+        actor("redBall", "red", lineup.red1, redBall, 9),
+        actor("red2", "red", lineup.red2, red2, 10),
+        actor("redGK", "red", "Goalkeeper", p(92, 32), 1, undefined, true),
+      ];
+    return {
+      defending: true,
+      nolan,
+      carrier: redBall,
+      goodTo: p(13, 30 + (index % 3) * 3),
+      badTo: p(7, 34),
+      target,
+      activeArea: focusedDutyArea(row, activeArea, nolan, redBall, target),
+      actors: completeMatch(active, index),
+    };
+  }
+  if (defending) {
+    const defensiveX: Record<SceneCategory, [number, number]> = {
+      winger: [38, 50],
+      striker: [62, 72],
+      "central-midfielder": [34, 47],
+      "attacking-midfielder": [56, 64],
+      "defensive-midfielder": [30, 44],
+      fullback: [27, 43],
+      "center-defender": [25, 41],
+      goalkeeper: [8, 38],
+      teamwork: [30, 44],
+    };
+    const [nolanX, carrierX] = defensiveX[category],
+      defenseY =
+        category === "striker" ||
+        category === "attacking-midfielder" ||
+        category === "defensive-midfielder" ||
+        category === "center-defender" ||
+        category === "teamwork"
+          ? 32
+          : y;
+    const nolan = p(nolanX + unique, defenseY),
+      redBall = p(
+        carrierX + jitter / 3,
+        Math.max(12, Math.min(52, defenseY - 3)),
+      ),
+      red2 = p(carrierX + 8, Math.max(13, Math.min(51, defenseY + 12))),
+      target = p(Math.max(14, nolanX - 9), 12 + (index % 3) * 19),
+      active = [
+        actor("nolan", "blue", row.role, nolan, 7, "Nolan"),
+        actor(
+          "blue1",
+          "blue",
+          lineup.blue1,
+          p(Math.max(18, nolanX - 8), 45),
+          4,
+        ),
+        actor(
+          "blue2",
+          "blue",
+          lineup.blue2,
+          p(Math.max(16, nolanX - 11), 17),
+          2,
+        ),
+        actor("blueGK", "blue", "Goalkeeper", p(8, 32), 1, undefined, true),
+        actor("redBall", "red", lineup.red1, redBall, 10),
+        actor("red2", "red", lineup.red2, red2, 9),
+        actor(
+          "red3",
+          "red",
+          "Supporting midfielder",
+          p(Math.min(76, carrierX + 5), 47),
+          8,
+        ),
+        actor("redGK", "red", "Goalkeeper", p(92, 32), 1, undefined, true),
+      ];
+    return {
+      defending: true,
+      nolan,
+      carrier: redBall,
+      goodTo: p(Math.min(carrierX - 3, nolanX + 6), defenseY - 2),
+      badTo: p(Math.min(88, carrierX + 4), defenseY + 5),
+      target,
+      activeArea: focusedDutyArea(row, activeArea, nolan, redBall, target),
+      actors: completeMatch(active, index),
+    };
+  }
+  const wideY = index % 2 === 0 ? 13 + unique : 51 - unique;
+  const positions: Record<
+    SceneCategory,
+    {
+      nolan: Point;
+      carrier: Point;
+      target: Point;
+      primary: Point;
+      secondary: Point;
+      good: Point;
+      bad: Point;
+    }
+  > = {
+    winger: {
+      nolan: p(58, wideY),
+      carrier: p(40, 32),
+      target: p(75, 40),
+      primary: p(67, wideY + 5),
+      secondary: p(80, 34),
+      good: p(61, wideY),
+      bad: p(65, wideY + 3),
+    },
+    striker: {
+      nolan: p(70, 32),
+      carrier: p(48, 35),
+      target: p(62, wideY),
+      primary: p(78, 27),
+      secondary: p(80, 42),
+      good: p(82, 34),
+      bad: p(76, 32),
+    },
+    "central-midfielder": {
+      nolan: p(44, 32),
+      carrier: p(25, 35),
+      target: p(67, wideY),
+      primary: p(54, 25),
+      secondary: p(58, 42),
+      good: p(48, 32),
+      bad: p(53, 32),
+    },
+    "attacking-midfielder": {
+      nolan: p(61, 32),
+      carrier: p(42, 35),
+      target: p(79, 38),
+      primary: p(69, 25),
+      secondary: p(76, 43),
+      good: p(65, 34),
+      bad: p(69, 32),
+    },
+    "defensive-midfielder": {
+      nolan: p(31, 32),
+      carrier: p(18, 36),
+      target: p(48, wideY),
+      primary: p(43, 25),
+      secondary: p(50, 43),
+      good: p(35, 32),
+      bad: p(42, 32),
+    },
+    fullback: {
+      nolan: p(49, wideY),
+      carrier: p(58, wideY + 5),
+      target: p(78, 34),
+      primary: p(68, wideY + 7),
+      secondary: p(76, 38),
+      good: p(65, wideY),
+      bad: p(62, wideY + 4),
+    },
+    "center-defender": {
+      nolan: p(26, 32),
+      carrier: p(17, wideY),
+      target: p(45, wideY),
+      primary: p(43, 27),
+      secondary: p(49, 42),
+      good: p(30, 32),
+      bad: p(40, 32),
+    },
+    goalkeeper: {
+      nolan: p(8, 32),
+      carrier: p(38, 32),
+      target: p(25, wideY),
+      primary: p(30, 32),
+      secondary: p(40, 40),
+      good: p(12, 32),
+      bad: p(7, 34),
+    },
+    teamwork: {
+      nolan: p(55, 32),
+      carrier: p(35, 35),
+      target: p(75, wideY),
+      primary: p(65, 25),
+      secondary: p(73, 43),
+      good: p(59, 32),
+      bad: p(64, 32),
+    },
+  };
+  const pos = positions[category],
+    family = dutyFamily(row),
+    primaryRole = category === "fullback" ? "Fullback" : lineup.red1,
+    archetype =
+      reviewedCoreIds.has(row.id) || row.id === "WNG-13" ? 1 : index % 3,
+    depthShift = (archetype - 1) * 6,
+    verticalShift = ["winger", "fullback"].includes(category)
+      ? 0
+      : (archetype - 1) * 4,
+    nolan = p(pos.nolan.x + unique + depthShift, pos.nolan.y + verticalShift),
+    carrier = p(
+      pos.carrier.x + unique / 2 + depthShift * 0.55,
+      pos.carrier.y - verticalShift * 0.5,
+    );
+  let target = p(
+      pos.target.x + depthShift * 0.7,
+      pos.target.y + unique - verticalShift,
+    ),
+    primary = p(
+      pos.primary.x + unique + depthShift,
+      pos.primary.y + verticalShift * 0.5,
+    ),
+    secondary = p(
+      pos.secondary.x + depthShift * 0.8,
+      pos.secondary.y + unique - verticalShift * 0.6,
+    ),
+    goodTo = p(pos.good.x + unique + depthShift, pos.good.y + verticalShift),
+    badTo = p(pos.bad.x + depthShift, pos.bad.y + unique + verticalShift);
+  if (
+    family === "receive" ||
+    family === "hold" ||
+    family === "possession" ||
+    family === "build"
+  ) {
+    goodTo = p(nolan.x + 2, nolan.y);
+    primary = p(
+      Math.max(nolan.x + 10, primary.x),
+      Math.max(9, Math.min(55, nolan.y + (index % 2 ? 8 : -8))),
+    );
+    badTo = p(primary.x - 2, primary.y);
+  }
+  if (family === "carry") {
+    primary = p(nolan.x + 9, nolan.y);
+    goodTo = p(
+      primary.x + 5,
+      Math.max(9, Math.min(55, nolan.y + (index % 2 ? 10 : -10))),
+    );
+    badTo = p(primary.x - 1, primary.y);
+  }
+  if (family === "move") {
+    const behind = /behind|back.post|beyond|overlap|underlap/.test(
+      row.decision.toLowerCase(),
+    );
+    goodTo = behind
+      ? p(
+          primary.x + 7,
+          Math.max(8, Math.min(56, nolan.y + (index % 2 ? 7 : -7))),
+        )
+      : p(
+          nolan.x + 4,
+          Math.max(8, Math.min(56, nolan.y + (index % 2 ? 8 : -8))),
+        );
+    badTo = p(primary.x - 1, primary.y);
+  }
+  if (family === "combine") {
+    goodTo = p(
+      primary.x + 5,
+      Math.max(9, Math.min(55, primary.y + (index % 2 ? 10 : -10))),
+    );
+    target = p(
+      nolan.x + 9,
+      Math.max(9, Math.min(55, nolan.y + (index % 2 ? -8 : 8))),
+    );
+    badTo = p(primary.x - 1, primary.y);
+  }
+  if (family === "switch") {
+    target = p(Math.max(62, nolan.x + 16), nolan.y < 32 ? 51 : 13);
+    primary = p(nolan.x + 7, nolan.y);
+    secondary = p(
+      nolan.x + 10,
+      Math.max(9, Math.min(55, nolan.y + (index % 2 ? 7 : -7))),
+    );
+    goodTo = p(nolan.x + 1, nolan.y);
+    badTo = p(primary.x - 1, primary.y);
+  }
+  if (family === "cross") {
+    goodTo = p(Math.max(75, nolan.x + 13), nolan.y < 32 ? 10 : 54);
+    primary = p(nolan.x + 8, nolan.y < 32 ? nolan.y + 7 : nolan.y - 7);
+    target = p(82, 34);
+    badTo = p(primary.x - 1, primary.y);
+  }
+  if (family === "finish") {
+    goodTo = p(82, index % 2 ? 38 : 27);
+    primary = p(78, index % 2 ? 27 : 39);
+    secondary = p(84, index % 2 ? 43 : 22);
+    target = p(74, index % 2 ? 18 : 48);
+    badTo = p(primary.x - 2, primary.y);
+  }
+  const active = [
+    actor("nolan", "blue", row.role, nolan, 7, "Nolan"),
+    actor("blue1", "blue", lineup.blue1, carrier, 8),
+    actor("blue2", "blue", lineup.blue2, target, 11),
+    actor("blueGK", "blue", "Goalkeeper", p(8, 32), 1, undefined, true),
+    actor("red1", "red", primaryRole, primary, 4),
+    actor("red2", "red", lineup.red2, secondary, 5),
+    actor("redGK", "red", "Goalkeeper", p(92, 32), 1, undefined, true),
+  ];
+  return {
+    defending: false,
+    nolan,
+    carrier,
+    goodTo,
+    badTo,
+    target,
+    activeArea: focusedDutyArea(row, activeArea, nolan, carrier, target),
+    actors: completeMatch(active, index),
+  };
+}
+
+function dutyGoodAnimation(
+  row: InventoryRow,
+  index: number,
+  l: ReturnType<typeof layout>,
+): AnimationStep[] {
+  const family = dutyFamily(row),
+    { nolan, carrier, goodTo, target } = l,
+    far = p(Math.min(88, target.x + 7), target.y),
+    goal = p(97, 32);
+  if (family === "gk-organize")
+    return [
+      step(0, 700, "scan", "nolan", nolan, nolan),
+      step(300, 1200, "run", "blue1", p(22, 20), p(15, 38)),
+      step(1000, 1200, "cross", "redBall", carrier, p(15, 38)),
+      step(2000, 700, "clear", "blue1", p(15, 38), p(39, 52)),
+      step(3000, 500, "celebrate", "nolan", undefined, undefined, "happy"),
+    ];
+  if (family === "gk-distribute")
+    return [
+      step(0, 600, "catch", "nolan", nolan, nolan),
+      step(700, 600, "scan", "nolan", nolan, nolan),
+      step(1400, 1000, "pass", "nolan", nolan, target),
+      step(2300, 500, "receive", "blue2", target, target),
+      step(2800, 1000, "dribble", "blue2", target, p(48, target.y)),
+    ];
+  if (family === "gk-sweep")
+    return [
+      step(0, 1400, "run", "nolan", nolan, p(24, 32)),
+      step(200, 1500, "dribble", "redBall", carrier, p(27, 34)),
+      step(1500, 700, "clear", "nolan", p(24, 32), p(40, 10)),
+      step(2400, 900, "run", "nolan", p(24, 32), p(9, 32)),
+      step(3300, 500, "celebrate", "blue1", undefined, undefined, "happy"),
+    ];
+  if (family === "gk-cross")
+    return [
+      step(0, 1200, "cross", "redBall", carrier, p(13, 34)),
+      step(400, 1200, "run", "nolan", nolan, p(13, 34)),
+      step(
+        1500,
+        700,
+        row.decision.toLowerCase().includes("punch") ? "parry" : "catch",
+        "nolan",
+        p(13, 34),
+        p(13, 34),
+      ),
+      step(2300, 900, "pass", "nolan", p(13, 34), target),
+      step(3200, 500, "receive", "blue2", target, target),
+    ];
+  if (family === "gk-shot")
+    return [
+      step(0, 700, "set", "nolan", nolan, p(10, 32)),
+      step(600, 800, "shoot", "redBall", carrier, p(6, index % 2 ? 27 : 38)),
+      step(1000, 800, "dive", "nolan", p(10, 32), p(7, index % 2 ? 27 : 38)),
+      step(
+        1600,
+        600,
+        row.decision.toLowerCase().includes("parry") ? "parry" : "catch",
+        "nolan",
+        p(7, index % 2 ? 27 : 38),
+        p(14, index % 2 ? 18 : 50),
+      ),
+      step(2700, 600, "celebrate", "blue1", undefined, undefined, "happy"),
+    ];
+  if (l.defending) {
+    if (family === "press")
+      return [
+        step(0, 1100, "press", "nolan", nolan, goodTo),
+        step(
+          300,
+          1400,
+          "dribble",
+          "redBall",
+          carrier,
+          p(goodTo.x + 4, goodTo.y),
+        ),
+        step(1300, 700, "block", "nolan", goodTo, p(goodTo.x + 2, goodTo.y)),
+        step(
+          2000,
+          900,
+          "pass",
+          "redBall",
+          carrier,
+          p(carrier.x + 8, carrier.y + 10),
+        ),
+        step(
+          2700,
+          700,
+          "defend",
+          "blue1",
+          undefined,
+          p(goodTo.x - 5, goodTo.y + 9),
+        ),
+        step(3300, 500, "celebrate", "nolan", undefined, undefined, "happy"),
+      ];
+    if (family === "cover" || family === "set-piece")
+      return [
+        step(0, 1400, "run", "red2", undefined, p(carrier.x - 8, target.y)),
+        step(
+          300,
+          1300,
+          family === "set-piece" ? "cross" : "pass",
+          "redBall",
+          carrier,
+          p(carrier.x - 8, target.y),
+        ),
+        step(500, 1300, "run", "nolan", nolan, goodTo),
+        step(1700, 700, "block", "nolan", goodTo, goodTo),
+        step(2300, 900, "clear", "nolan", goodTo, target),
+        step(3200, 500, "celebrate", "blue1", undefined, undefined, "happy"),
+      ];
+    return [
+      step(0, 1500, "dribble", "redBall", carrier, p(carrier.x - 8, carrier.y)),
+      step(200, 1300, "defend", "nolan", nolan, goodTo),
+      step(700, 1700, "run", "blue1", undefined, p(goodTo.x - 5, goodTo.y + 8)),
+      step(
+        1700,
+        800,
+        "turn",
+        "redBall",
+        p(carrier.x - 8, carrier.y),
+        p(carrier.x + 2, carrier.y - 8),
+      ),
+      step(
+        2500,
+        800,
+        "pass",
+        "redBall",
+        p(carrier.x + 2, carrier.y - 8),
+        p(carrier.x + 12, carrier.y - 10),
+      ),
+      step(3300, 500, "celebrate", "nolan", undefined, undefined, "happy"),
+    ];
+  }
+  if (family === "cross")
+    return [
+      step(0, 700, "pass", "blue1", carrier, nolan),
+      step(600, 500, "receive", "nolan", nolan, nolan),
+      step(1000, 1000, "dribble", "nolan", nolan, goodTo),
+      step(1900, 900, "cross", "nolan", goodTo, target),
+      step(2700, 700, "shoot", "blue2", target, goal),
+      step(3400, 500, "celebrate", "nolan", undefined, undefined, "happy"),
+    ];
+  if (family === "finish")
+    return [
+      step(0, 1100, "run", "nolan", nolan, goodTo),
+      step(500, 900, "pass", "blue1", carrier, goodTo),
+      step(1300, 500, "receive", "nolan", goodTo, goodTo),
+      step(1900, 800, "shoot", "nolan", goodTo, goal),
+      step(2800, 600, "celebrate", "blue2", undefined, undefined, "happy"),
+    ];
+  if (family === "receive")
+    return [
+      step(0, 600, index % 2 ? "scan" : "turn", "nolan", nolan, nolan),
+      step(500, 900, "pass", "blue1", carrier, nolan),
+      step(1300, 500, "receive", "nolan", nolan, goodTo),
+      step(1800, 700, "turn", "nolan", goodTo, p(goodTo.x + 3, goodTo.y)),
+      step(2400, 900, "pass", "nolan", p(goodTo.x + 3, goodTo.y), target),
+      step(3200, 500, "receive", "blue2", target, target),
+    ];
+  if (family === "combine")
+    return [
+      step(0, 700, "pass", "nolan", nolan, target),
+      step(300, 1500, "run", "nolan", nolan, goodTo),
+      step(700, 500, "receive", "blue2", target, target),
+      step(1300, 700, "pass", "blue2", target, goodTo),
+      step(2000, 500, "receive", "nolan", goodTo, goodTo),
+      step(
+        2600,
+        700,
+        index % 2 ? "shoot" : "pass",
+        "nolan",
+        goodTo,
+        index % 2 ? goal : far,
+      ),
+      step(3300, 500, "celebrate", "blue2", undefined, undefined, "happy"),
+    ];
+  if (family === "switch")
+    return [
+      step(0, 700, "scan", "nolan", nolan, nolan),
+      step(500, 700, "pass", "blue1", carrier, nolan),
+      step(1200, 500, "receive", "nolan", nolan, nolan),
+      step(1700, 1200, "pass", "nolan", nolan, target),
+      step(2800, 500, "receive", "blue2", target, target),
+      step(3200, 900, "dribble", "blue2", target, far),
+    ];
+  if (family === "hold")
+    return [
+      step(0, 800, "pass", "blue1", carrier, nolan),
+      step(700, 500, "receive", "nolan", nolan, nolan),
+      step(1100, 1300, "shield", "nolan", nolan, goodTo),
+      step(900, 1500, "run", "blue2", target, far),
+      step(2300, 800, "pass", "nolan", goodTo, far),
+      step(3100, 500, "receive", "blue2", far, far),
+    ];
+  if (family === "carry")
+    return [
+      step(0, 500, "receive", "nolan", nolan, nolan),
+      step(400, 1500, "dribble", "nolan", nolan, goodTo),
+      step(700, 1300, "defend", "red1", undefined, p(goodTo.x + 3, goodTo.y)),
+      step(1900, 800, "pass", "nolan", goodTo, target),
+      step(2700, 500, "receive", "blue2", target, target),
+      step(3200, 700, "shoot", "blue2", target, goal),
+    ];
+  if (family === "move")
+    return [
+      step(0, 1500, "run", "nolan", nolan, goodTo),
+      step(
+        300,
+        1200,
+        "defend",
+        "red1",
+        undefined,
+        p(goodTo.x - 3, goodTo.y + 4),
+      ),
+      step(900, 900, "pass", "blue1", carrier, goodTo),
+      step(1700, 500, "receive", "nolan", goodTo, goodTo),
+      step(2300, 800, "pass", "nolan", goodTo, target),
+      step(3100, 500, "receive", "blue2", target, target),
+    ];
+  return [
+    step(0, 600, index % 2 ? "scan" : "run", "nolan", nolan, goodTo),
+    step(500, 800, "pass", "blue1", carrier, goodTo),
+    step(1200, 500, "receive", "nolan", goodTo, goodTo),
+    step(1800, 900, "pass", "nolan", goodTo, target),
+    step(2600, 500, "receive", "blue2", target, target),
+    step(3100, 800, "dribble", "blue2", target, far),
+  ];
+}
+
+function dutyPoorAnimation(
+  row: InventoryRow,
+  index: number,
+  l: ReturnType<typeof layout>,
+): AnimationStep[] {
+  const family = dutyFamily(row),
+    { nolan, carrier, badTo, target } = l,
+    blueGoal = p(3, 32);
+  if (family.startsWith("gk-")) {
+    if (family === "gk-distribute")
+      return [
+        step(0, 700, "catch", "nolan", nolan, nolan),
+        step(800, 900, "pass", "nolan", nolan, p(28, 32)),
+        step(1500, 500, "receive", "red2", p(28, 32), p(27, 32)),
+        step(2100, 800, "shoot", "red2", p(27, 32), blueGoal),
+        step(2900, 600, "react", "nolan", undefined, undefined, "worried"),
+      ];
+    if (family === "gk-cross" || family === "gk-organize")
+      return [
+        step(0, 900, "walk", "nolan", nolan, p(7, 32)),
+        step(500, 1200, "cross", "redBall", carrier, p(13, 38)),
+        step(1600, 500, "receive", "red2", p(13, 38), p(12, 38)),
+        step(2200, 700, "shoot", "red2", p(12, 38), blueGoal),
+        step(2900, 600, "react", "nolan", undefined, undefined, "worried"),
+      ];
+    if (family === "gk-sweep")
+      return [
+        step(0, 1200, "walk", "nolan", nolan, p(15, 32)),
+        step(300, 1500, "dribble", "redBall", carrier, p(18, 34)),
+        step(1700, 800, "shoot", "redBall", p(18, 34), blueGoal),
+        step(2600, 600, "react", "nolan", undefined, undefined, "worried"),
+      ];
+    return [
+      step(0, 800, "shoot", "redBall", carrier, p(8, 32)),
+      step(500, 800, "dive", "nolan", nolan, p(8, 32)),
+      step(1100, 600, "parry", "nolan", p(8, 32), p(19, 34)),
+      step(1800, 700, "shoot", "red2", p(19, 34), blueGoal),
+      step(2700, 600, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  }
+  if (l.defending) {
+    if (family === "press")
+      return [
+        step(0, 1200, "walk", "nolan", nolan, badTo),
+        step(
+          300,
+          1500,
+          "dribble",
+          "redBall",
+          carrier,
+          p(carrier.x - 10, carrier.y),
+        ),
+        step(
+          1500,
+          800,
+          "pass",
+          "redBall",
+          p(carrier.x - 10, carrier.y),
+          p(carrier.x - 18, target.y),
+        ),
+        step(
+          2200,
+          500,
+          "receive",
+          "red2",
+          p(carrier.x - 18, target.y),
+          p(carrier.x - 19, target.y),
+        ),
+        step(2800, 800, "shoot", "red2", p(carrier.x - 19, target.y), blueGoal),
+        step(3400, 500, "react", "nolan", undefined, undefined, "worried"),
+      ];
+    if (family === "cover" || family === "set-piece")
+      return [
+        step(0, 1200, "run", "nolan", nolan, badTo),
+        step(200, 1500, "run", "red2", undefined, p(carrier.x - 14, target.y)),
+        step(
+          700,
+          1100,
+          family === "set-piece" ? "cross" : "pass",
+          "redBall",
+          carrier,
+          p(carrier.x - 14, target.y),
+        ),
+        step(
+          1800,
+          500,
+          "receive",
+          "red2",
+          p(carrier.x - 14, target.y),
+          p(carrier.x - 15, target.y),
+        ),
+        step(2400, 800, "shoot", "red2", p(carrier.x - 15, target.y), blueGoal),
+        step(3200, 500, "react", "nolan", undefined, undefined, "worried"),
+      ];
+    return [
+      step(0, 900, "defend", "nolan", nolan, badTo),
+      step(
+        400,
+        1600,
+        "dribble",
+        "redBall",
+        carrier,
+        p(carrier.x - 14, carrier.y),
+      ),
+      step(
+        1700,
+        700,
+        "pass",
+        "redBall",
+        p(carrier.x - 14, carrier.y),
+        p(carrier.x - 20, target.y),
+      ),
+      step(2400, 700, "shoot", "red2", p(carrier.x - 20, target.y), blueGoal),
+      step(3200, 500, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  }
+  if (family === "combine")
+    return [
+      step(0, 700, "pass", "nolan", nolan, target),
+      step(500, 1300, "walk", "nolan", nolan, badTo),
+      step(900, 800, "pass", "blue2", target, goodPoint(badTo)),
+      step(1700, 700, "defend", "red1", undefined, goodPoint(badTo)),
+      step(2400, 1000, "dribble", "red1", goodPoint(badTo), p(35, 36)),
+      step(3300, 500, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  const loseAt = badTo;
+  return [
+    step(
+      0,
+      1100,
+      family === "receive" ? "turn" : family === "hold" ? "dribble" : "run",
+      "nolan",
+      nolan,
+      loseAt,
+    ),
+    step(600, 800, "pass", "blue1", carrier, loseAt),
+    step(1300, 700, "defend", "red1", undefined, loseAt),
+    step(2000, 1100, "dribble", "red1", loseAt, p(35, index % 2 ? 23 : 43)),
+    step(2900, 600, "run", "red2", undefined, p(43, index % 2 ? 45 : 20)),
+    step(3400, 500, "react", "nolan", undefined, undefined, "worried"),
+  ];
+}
+
+const goodPoint = (point: Point) => p(point.x + 1, point.y);
+
+function goodAnimation(
+  row: InventoryRow,
+  index: number,
+  l: ReturnType<typeof layout>,
+): AnimationStep[] {
+  const { nolan, carrier, goodTo, target } = l;
+  if (!reviewedCoreIds.has(row.id)) return dutyGoodAnimation(row, index, l);
+  if (row.id === "TW-09")
+    return [
+      step(0, 1400, "run", "nolan", nolan, p(67, 32)),
+      step(0, 1500, "run", "blue2", target, p(72, 52)),
+      step(300, 900, "pass", "blue1", carrier, p(67, 32)),
+      step(1300, 500, "receive", "nolan", p(67, 32), p(68, 32)),
+      step(1900, 800, "pass", "nolan", p(68, 32), p(72, 52)),
+      step(2600, 800, "shoot", "blue2", p(72, 52), p(97, 34)),
+      step(3300, 500, "celebrate", "nolan", undefined, undefined, "happy"),
+    ];
+  if (row.id === "FB-03")
+    return [
+      step(0, 1600, "run", "nolan", nolan, p(76, 12)),
+      step(300, 1200, "shield", "blue2", target, p(67, 22)),
+      step(700, 1900, "run", "blue1", carrier, p(84, 38)),
+      step(1300, 700, "pass", "blue2", p(67, 22), p(76, 12)),
+      step(2000, 500, "receive", "nolan", p(76, 12), p(77, 12)),
+      step(2500, 900, "cross", "nolan", p(77, 12), p(84, 38)),
+      step(3400, 600, "shoot", "blue1", p(84, 38), p(97, 32)),
+    ];
+  if (row.id === "TW-02")
+    return [
+      step(0, 1200, "run", "nolan", nolan, p(43, 31)),
+      step(0, 1200, "run", "blue2", target, p(53, 48)),
+      step(600, 800, "pass", "blue1", carrier, p(43, 31)),
+      step(1300, 500, "receive", "nolan", p(43, 31), p(44, 31)),
+      step(1800, 800, "pass", "nolan", p(44, 31), p(53, 48)),
+      step(2500, 700, "pass", "blue2", p(53, 48), p(69, 34)),
+      step(3200, 500, "celebrate", "blue1", undefined, undefined, "happy"),
+    ];
+  if (row.id === "TW-07")
+    return [
+      step(0, 1500, "defend", "nolan", nolan, p(28, 32)),
+      step(200, 1800, "dribble", "redBall", carrier, p(31, 30)),
+      step(900, 1800, "run", "blue1", p(24, 45), p(27, 37)),
+      step(1900, 900, "turn", "redBall", p(31, 30), p(40, 22)),
+      step(2600, 700, "defend", "blue1", p(27, 37), p(32, 30)),
+      step(3300, 500, "celebrate", "nolan", undefined, undefined, "happy"),
+    ];
+  if (row.id === "GK-01")
+    return [
+      step(0, 900, "set", "nolan", nolan, p(12, 32)),
+      step(700, 900, "shoot", "redBall", carrier, p(4, 27)),
+      step(1200, 900, "dive", "nolan", p(12, 32), p(8, 27)),
+      step(1300, 700, "block", "nolan", p(8, 27), p(19, 20)),
+      step(2500, 600, "celebrate", "blue1", undefined, undefined, "happy"),
+    ];
+  if (row.id === "GK-02")
+    return [
+      step(0, 1600, "run", "nolan", nolan, p(23, 32)),
+      step(300, 1500, "dribble", "redBall", carrier, p(25, 34)),
+      step(1500, 800, "clear", "nolan", p(23, 32), p(36, 10)),
+      step(2400, 900, "run", "nolan", p(23, 32), p(11, 32)),
+      step(3300, 500, "celebrate", "blue1", undefined, undefined, "happy"),
+    ];
+  if (row.id === "GK-03")
+    return [
+      step(0, 900, "shoot", "redBall", carrier, p(6, 35)),
+      step(500, 900, "dive", "nolan", nolan, p(7, 36)),
+      step(900, 700, "parry", "nolan", p(7, 36), p(13, 56)),
+      step(1800, 900, "run", "blue1", p(22, 20), p(16, 48)),
+      step(2800, 500, "celebrate", "blue1", undefined, undefined, "happy"),
+    ];
+  if (row.id === "GK-04")
+    return [
+      step(0, 700, "catch", "nolan", nolan, nolan),
+      step(800, 500, "scan", "nolan", nolan, p(9, 31)),
+      step(1400, 1000, "pass", "nolan", p(9, 31), target),
+      step(2300, 500, "receive", "blue2", target, p(target.x + 1, target.y)),
+      step(2800, 1100, "dribble", "blue2", target, p(48, 52)),
+    ];
+  if (row.id === "GK-05")
+    return [
+      step(0, 700, "scan", "nolan", nolan, p(9, 31)),
+      step(300, 1100, "run", "blue1", p(22, 20), p(15, 42)),
+      step(1200, 1100, "cross", "redBall", carrier, p(15, 42)),
+      step(2100, 800, "clear", "blue1", p(15, 42), p(39, 54)),
+      step(3000, 600, "celebrate", "nolan", undefined, undefined, "happy"),
+    ];
+  if (row.id === "GK-06")
+    return [
+      step(0, 1200, "cross", "redBall", carrier, p(13, 32)),
+      step(500, 1200, "run", "nolan", nolan, p(13, 32)),
+      step(1500, 700, "catch", "nolan", p(13, 32), p(13, 32)),
+      step(2200, 900, "run", "nolan", p(13, 32), p(8, 32)),
+      step(3100, 500, "celebrate", "blue1", undefined, undefined, "happy"),
+    ];
+  if (row.id === "GK-07")
+    return [
+      step(0, 700, "shoot", "redBall", carrier, p(7, 27)),
+      step(400, 700, "dive", "nolan", nolan, p(7, 27)),
+      step(900, 600, "parry", "nolan", p(7, 27), p(18, 38)),
+      step(1400, 700, "set", "nolan", p(7, 27), p(9, 32)),
+      step(1900, 700, "shoot", "red2", p(18, 38), p(5, 36)),
+      step(2100, 700, "dive", "nolan", p(9, 32), p(6, 36)),
+      step(2600, 700, "catch", "nolan", p(6, 36), p(6, 36)),
+      step(3300, 500, "celebrate", "blue1", undefined, undefined, "happy"),
+    ];
+  if (row.id.startsWith("GK-")) {
+    const style = index % 6;
+    if (style === 0)
+      return [
+        step(0, 700, "set", "nolan", nolan, p(10, 32)),
+        step(600, 800, "shoot", "redBall", carrier, p(5, 28)),
+        step(1000, 800, "dive", "nolan", p(10, 32), p(6, 28)),
+        step(1500, 600, "block", "nolan", p(6, 28), p(19, 18)),
+        step(2600, 600, "celebrate", "blue1", undefined, undefined, "happy"),
+      ];
+    if (style === 1)
+      return [
+        step(0, 1200, "cross", "redBall", carrier, p(13, 34)),
+        step(500, 1100, "run", "nolan", nolan, p(13, 34)),
+        step(1500, 700, "catch", "nolan", p(13, 34), p(13, 34)),
+        step(2400, 800, "pass", "nolan", p(13, 34), target),
+        step(3200, 500, "receive", "blue2", target, target),
+      ];
+    if (style === 2)
+      return [
+        step(0, 800, "shoot", "redBall", carrier, p(6, 38)),
+        step(400, 800, "dive", "nolan", nolan, p(7, 38)),
+        step(1000, 600, "parry", "nolan", p(7, 38), p(14, 55)),
+        step(1900, 900, "run", "nolan", p(7, 38), p(8, 32)),
+        step(3000, 500, "celebrate", "blue1", undefined, undefined, "happy"),
+      ];
+    if (style === 3)
+      return [
+        step(0, 700, "catch", "nolan", nolan, nolan),
+        step(800, 600, "scan", "nolan", nolan, p(9, 31)),
+        step(1500, 1000, "pass", "nolan", p(9, 31), target),
+        step(2400, 500, "receive", "blue2", target, target),
+        step(2900, 1000, "dribble", "blue2", target, p(49, target.y)),
+      ];
+    if (style === 4)
+      return [
+        step(0, 1500, "run", "nolan", nolan, p(24, 32)),
+        step(300, 1500, "dribble", "redBall", carrier, p(26, 34)),
+        step(1500, 800, "clear", "nolan", p(24, 32), p(39, 9)),
+        step(2500, 900, "run", "nolan", p(24, 32), p(9, 32)),
+        step(3400, 500, "celebrate", "blue1", undefined, undefined, "happy"),
+      ];
+    return [
+      step(0, 700, "set", "nolan", nolan, p(9, 32)),
+      step(600, 800, "shoot", "redBall", carrier, p(7, 34)),
+      step(1000, 800, "dive", "nolan", p(9, 32), p(7, 34)),
+      step(1500, 600, "catch", "nolan", p(7, 34), p(7, 34)),
+      step(2500, 900, "pass", "nolan", p(7, 34), target),
+    ];
+  }
+  if (row.id === "AM-04")
+    return [
+      step(0, 700, "pass", "nolan", nolan, target),
+      step(400, 1500, "run", "nolan", nolan, p(79, 31)),
+      step(700, 500, "receive", "blue2", target, target),
+      step(1300, 700, "pass", "blue2", target, p(79, 31)),
+      step(2000, 500, "receive", "nolan", p(79, 31), p(80, 31)),
+      step(2500, 700, "shoot", "nolan", p(80, 31), p(97, 32)),
+      step(3200, 500, "celebrate", "blue2", undefined, undefined, "happy"),
+    ];
+  if (row.id === "WNG-04") {
+    const endLine = p(84, nolan.y < 32 ? 10 : 54),
+      cutback = p(75, nolan.y < 32 ? 24 : 40);
+    return [
+      step(0, 1500, "dribble", "nolan", nolan, endLine),
+      step(500, 1200, "run", "blue2", target, cutback),
+      step(
+        700,
+        1200,
+        "defend",
+        "red1",
+        undefined,
+        p(81, nolan.y < 32 ? 18 : 46),
+      ),
+      step(1500, 900, "cross", "nolan", endLine, cutback),
+      step(2300, 500, "receive", "blue2", cutback, cutback),
+      step(2800, 800, "shoot", "blue2", cutback, p(97, 32)),
+      step(3500, 500, "celebrate", "nolan", undefined, undefined, "happy"),
+    ];
+  }
+  if (crossers.has(row.id))
+    return [
+      step(0, 1100, "dribble", "nolan", nolan, goodTo),
+      step(900, 1000, "cross", "nolan", goodTo, target),
+      step(1800, 500, "receive", "blue2", target, target),
+      step(2300, 800, "shoot", "blue2", target, p(97, 32)),
+      step(3000, 600, "celebrate", "nolan", undefined, undefined, "happy"),
+    ];
+  if (passFinishers.has(row.id))
+    return [
+      step(0, 800, "run", "blue2", target, p(82, 38)),
+      step(300, 900, "pass", "nolan", nolan, p(82, 38)),
+      step(1200, 500, "receive", "blue2", p(82, 38), p(83, 38)),
+      step(1900, 700, "shoot", "blue2", p(83, 38), p(97, 32)),
+      step(2800, 600, "celebrate", "nolan", undefined, undefined, "happy"),
+    ];
+  if (finishers.has(row.id))
+    return [
+      step(0, 1200, "run", "nolan", nolan, goodTo),
+      step(600, 900, "pass", "blue1", carrier, goodTo),
+      step(1400, 500, "receive", "nolan", goodTo, goodTo),
+      step(2000, 800, "shoot", "nolan", goodTo, p(97, 32)),
+      step(2900, 600, "celebrate", "blue2", undefined, undefined, "happy"),
+    ];
+  return dutyGoodAnimation(row, index, l);
+}
+
+function poorAnimation(
+  row: InventoryRow,
+  index: number,
+  l: ReturnType<typeof layout>,
+): AnimationStep[] {
+  const { nolan, carrier, badTo, target } = l;
+  const text = row.poor.toLowerCase();
+  if (!reviewedCoreIds.has(row.id)) return dutyPoorAnimation(row, index, l);
+  if (row.id === "GK-01" || row.id === "GK-02")
+    return [
+      step(0, 1100, "walk", "nolan", nolan, badTo),
+      step(400, 1300, "dribble", "redBall", carrier, p(18, 36)),
+      step(1700, 800, "shoot", "redBall", p(18, 36), p(3, 32)),
+      step(2300, 600, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  if (row.id === "GK-03")
+    return [
+      step(0, 800, "shoot", "redBall", carrier, p(8, 32)),
+      step(500, 900, "dive", "nolan", nolan, p(8, 32)),
+      step(1000, 600, "parry", "nolan", p(8, 32), p(20, 32)),
+      step(1700, 700, "shoot", "red2", p(20, 32), p(3, 32)),
+      step(2500, 600, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  if (row.id === "GK-04")
+    return [
+      step(0, 700, "catch", "nolan", nolan, nolan),
+      step(900, 900, "pass", "nolan", nolan, p(29, 32)),
+      step(1500, 500, "receive", "red2", p(29, 32), p(28, 32)),
+      step(2100, 800, "shoot", "red2", p(28, 32), p(3, 32)),
+      step(2700, 600, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  if (row.id === "GK-05")
+    return [
+      step(0, 800, "walk", "nolan", nolan, p(8, 34)),
+      step(800, 1100, "cross", "redBall", carrier, p(14, 43)),
+      step(1600, 700, "receive", "red2", p(14, 43), p(13, 42)),
+      step(2200, 700, "shoot", "red2", p(13, 42), p(3, 34)),
+      step(2800, 600, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  if (row.id === "GK-06")
+    return [
+      step(0, 900, "walk", "nolan", nolan, p(7, 32)),
+      step(500, 1200, "cross", "redBall", carrier, p(13, 34)),
+      step(1600, 500, "receive", "red2", p(13, 34), p(12, 35)),
+      step(2200, 700, "shoot", "red2", p(12, 35), p(3, 32)),
+      step(2800, 600, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  if (row.id === "GK-07")
+    return [
+      step(0, 700, "shoot", "redBall", carrier, p(7, 27)),
+      step(400, 700, "dive", "nolan", nolan, p(7, 27)),
+      step(900, 600, "parry", "nolan", p(7, 27), p(18, 38)),
+      step(1500, 900, "walk", "nolan", p(7, 27), p(8, 29)),
+      step(1700, 700, "shoot", "red2", p(18, 38), p(3, 36)),
+      step(2400, 600, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  if (row.id.startsWith("GK-")) {
+    const style = index % 4;
+    if (style === 0)
+      return [
+        step(0, 900, "walk", "nolan", nolan, p(7, 34)),
+        step(500, 900, "shoot", "redBall", carrier, p(3, 27)),
+        step(1800, 600, "react", "nolan", undefined, undefined, "worried"),
+        step(2700, 600, "react", "blue1", undefined, undefined, "worried"),
+      ];
+    if (style === 1)
+      return [
+        step(0, 1100, "cross", "redBall", carrier, p(14, 37)),
+        step(700, 900, "walk", "nolan", nolan, p(7, 32)),
+        step(1500, 500, "receive", "red2", p(14, 37), p(13, 37)),
+        step(2100, 700, "shoot", "red2", p(13, 37), p(3, 33)),
+        step(2800, 600, "react", "nolan", undefined, undefined, "worried"),
+      ];
+    if (style === 2)
+      return [
+        step(0, 800, "shoot", "redBall", carrier, p(7, 31)),
+        step(500, 800, "dive", "nolan", nolan, p(7, 31)),
+        step(1000, 600, "parry", "nolan", p(7, 31), p(19, 34)),
+        step(1700, 700, "shoot", "red2", p(19, 34), p(3, 35)),
+        step(2600, 600, "react", "nolan", undefined, undefined, "worried"),
+      ];
+    return [
+      step(0, 700, "catch", "nolan", nolan, nolan),
+      step(900, 900, "pass", "nolan", nolan, p(28, 32)),
+      step(1500, 500, "receive", "red2", p(28, 32), p(27, 32)),
+      step(2100, 800, "shoot", "red2", p(27, 32), p(3, 32)),
+      step(2800, 600, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  }
+  if (text.includes("offside"))
+    return [
+      step(0, 1500, "run", "nolan", nolan, p(86, nolan.y)),
+      step(800, 900, "pass", "blue1", carrier, p(86, nolan.y)),
+      step(1700, 700, "walk", "red1", undefined, p(81, 34)),
+      step(2400, 600, "react", "nolan", undefined, undefined, "surprised"),
+    ];
+  if (
+    text.includes("goalkeeper") ||
+    text.includes("hands") ||
+    text.includes("held")
+  )
+    return [
+      step(0, 1000, "run", "nolan", nolan, badTo),
+      step(900, 1100, "cross", "nolan", badTo, p(91, 32)),
+      step(1900, 700, "catch", "redGK", p(92, 32), p(91, 32)),
+      step(2700, 600, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  if (
+    l.defending &&
+    (text.includes("shot") ||
+      text.includes("scores") ||
+      text.includes("goal") ||
+      text.includes("finish"))
+  )
+    return [
+      step(0, 1100, "run", "nolan", nolan, badTo),
+      step(300, 1300, "dribble", "redBall", carrier, p(22, 35)),
+      step(1300, 700, "pass", "redBall", p(22, 35), p(17, 42)),
+      step(2000, 500, "receive", "red2", p(17, 42), p(16, 40)),
+      step(2500, 800, "shoot", "red2", p(16, 40), p(3, 32)),
+      step(3000, 500, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  return dutyPoorAnimation(row, index, l);
+}
+
+function alternateAnimation(
+  row: InventoryRow,
+  l: ReturnType<typeof layout>,
+): AnimationStep[] {
+  const alt = p(Math.min(88, l.goodTo.x + 5), Math.max(9, 58 - l.goodTo.y));
+  if (row.id === "GK-04")
+    return [
+      step(0, 700, "catch", "nolan", l.nolan, l.nolan),
+      step(800, 600, "scan", "nolan", l.nolan, p(9, 34)),
+      step(1500, 1100, "pass", "nolan", p(9, 34), p(34, 14)),
+      step(2500, 500, "receive", "blue1", p(34, 14), p(35, 14)),
+      step(3000, 900, "dribble", "blue1", p(35, 14), p(48, 17)),
+    ];
+  if (l.defending)
+    return [
+      step(0, 1100, "run", "nolan", l.nolan, alt),
+      step(500, 1200, "defend", "blue1", p(24, 40), p(29, 34)),
+      step(1500, 800, "pass", "blue1", p(29, 34), alt),
+      step(2300, 800, "clear", "nolan", alt, p(46, 54)),
+      step(3100, 500, "celebrate", "blue1", undefined, undefined, "happy"),
+    ];
+  return [
+    step(0, 1000, "run", "nolan", l.nolan, alt),
+    step(600, 900, "pass", "blue1", l.carrier, alt),
+    step(1400, 500, "receive", "nolan", alt, alt),
+    step(1900, 900, "pass", "nolan", alt, l.target),
+    step(2700, 500, "receive", "blue2", l.target, l.target),
+    step(3100, 700, "celebrate", "blue1", undefined, undefined, "happy"),
+  ];
+}
+
+const clampPoint = (point: Point) =>
+  p(Math.max(5, Math.min(95, point.x)), Math.max(8, Math.min(56, point.y)));
+function supportingSetupSteps(
+  actors: AnimatedActor[],
+  defending: boolean,
+): AnimationStep[] {
+  return actors
+    .filter((item) => item.id.startsWith("support-") && !item.goalkeeper)
+    .map((item, index) => {
+      const attacking = item.team === (defending ? "red" : "blue"),
+        dx = attacking ? -2.8 : 2.2,
+        dy = item.start.y < 32 ? 2.2 : -2.2;
+      return step(
+        350 + (index % 4) * 260,
+        1500,
+        attacking ? "run" : "defend",
+        item.id,
+        item.start,
+        clampPoint(p(item.start.x + dx, item.start.y + dy)),
+      );
+    });
+}
+function supportingReactionSteps(
+  actors: AnimatedActor[],
+  defending: boolean,
+  quality: "good" | "poor",
+): AnimationStep[] {
+  return actors
+    .filter((item) => item.id.startsWith("support-") && !item.goalkeeper)
+    .map((item, index) => {
+      const blueAdvantage = quality === "good",
+        dx = blueAdvantage
+          ? item.team === "blue"
+            ? 4
+            : 2
+          : item.team === "red"
+            ? -5
+            : -3.5,
+        towardBall = item.start.y < 32 ? 3 : -3;
+      const action =
+        item.team === (blueAdvantage ? "red" : "blue") ? "defend" : "run";
+      return step(
+        250 + (index % 4) * 380,
+        1800,
+        action,
+        item.id,
+        undefined,
+        clampPoint(p(item.start.x + dx, item.start.y + towardBall)),
+      );
+    });
+}
+
+function distanceFromLane(point: Point, start: Point, end: Point) {
+  const dx = end.x - start.x,
+    dy = end.y - start.y,
+    length = dx * dx + dy * dy;
+  if (!length) return { distance: 99, progress: 0 };
+  const progress = Math.max(
+      0,
+      Math.min(
+        1,
+        ((point.x - start.x) * dx + (point.y - start.y) * dy) / length,
+      ),
+    ),
+    x = start.x + progress * dx,
+    y = start.y + progress * dy;
+  return { distance: Math.hypot(point.x - x, point.y - y), progress };
+}
+function prepareClearBestPaths(
+  actors: AnimatedActor[],
+  ballStart: Point,
+  setup: AnimationStep[],
+  rawSteps: AnimationStep[],
+) {
+  const hasEarlyBlueKick = rawSteps.some(
+      (item) =>
+        item.startTime < 550 &&
+        item.actorId &&
+        actors.find((actor) => actor.id === item.actorId)?.team === "blue" &&
+        ["pass", "cross", "clear", "shoot"].includes(item.action),
+    ),
+    steps = rawSteps.map((item) => ({
+      ...item,
+      startTime: item.startTime + (hasEarlyBlueKick ? 700 : 0),
+    })),
+    frame = finalFrame(actors, ballStart, setup),
+    positions = Object.fromEntries(
+      Object.entries(frame.actors).map(([id, value]) => [
+        id,
+        { ...value.position },
+      ]),
+    );
+  let ball = { ...frame.ball };
+  const openings: AnimationStep[] = [];
+  for (const item of [...steps].sort((a, b) => a.startTime - b.startTime)) {
+    const kicker = item.actorId
+      ? actors.find((actor) => actor.id === item.actorId)
+      : undefined;
+    if (
+      kicker?.team === "blue" &&
+      item.to &&
+      ["pass", "cross", "clear", "shoot"].includes(item.action)
+    ) {
+      const from = item.from ?? ball,
+        to = item.to,
+        dx = to.x - from.x,
+        dy = to.y - from.y,
+        length = Math.max(1, Math.hypot(dx, dy)),
+        perpendicular = p(-dy / length, dx / length);
+      actors
+        .filter(
+          (actor) =>
+            actor.team === "red" &&
+            !(item.action === "shoot" && actor.goalkeeper),
+        )
+        .forEach((actor, actorIndex) => {
+          const lane = distanceFromLane(
+            positions[actor.id] ?? actor.start,
+            from,
+            to,
+          );
+          if (
+            lane.progress > 0.14 &&
+            lane.progress < 0.9 &&
+            lane.distance < 3.4
+          ) {
+            const current = positions[actor.id] ?? actor.start,
+              side =
+                (current.x - from.x) * perpendicular.x +
+                  (current.y - from.y) * perpendicular.y ||
+                (actorIndex % 2) * 2 - 1,
+              destination = clampPoint(
+                p(
+                  current.x + perpendicular.x * 11.5 * Math.sign(side),
+                  current.y + perpendicular.y * 11.5 * Math.sign(side),
+                ),
+              );
+            openings.push(
+              step(
+                Math.max(0, item.startTime - 100),
+                650,
+                "defend",
+                actor.id,
+                current,
+                destination,
+              ),
+            );
+            steps
+              .filter(
+                (next) =>
+                  next.actorId === actor.id &&
+                  next.startTime >= item.startTime - 200 &&
+                  next.startTime <= item.startTime + 100,
+              )
+              .forEach((next) => {
+                next.startTime = item.startTime + item.duration + 120;
+              });
+            positions[actor.id] = destination;
+          }
+        });
+    }
+    if (
+      item.actorId &&
+      item.to &&
+      ![
+        "pass",
+        "shoot",
+        "cross",
+        "clear",
+        "parry",
+        "block",
+        "celebrate",
+        "react",
+      ].includes(item.action)
+    )
+      positions[item.actorId] = { ...item.to };
+    if (
+      item.to &&
+      [
+        "pass",
+        "shoot",
+        "dribble",
+        "receive",
+        "cross",
+        "clear",
+        "catch",
+        "parry",
+        "block",
+      ].includes(item.action)
+    )
+      ball = { ...item.to };
+  }
+  return [...steps, ...openings];
+}
+
+function makeScene(row: InventoryRow, index: number): AnimatedScenario {
+  const meta = metadata[row.id];
+  if (!meta) throw new Error(`Missing scene metadata for ${row.id}`);
+  const l = layout(row, index),
+    redStart = l.actors.find((item) => item.id === "red1")?.start;
+  const activeSetup: AnimationStep[] = l.defending
+    ? [
+        step(
+          200,
+          2200,
+          "dribble",
+          "redBall",
+          p(l.carrier.x + 10, l.carrier.y),
+          l.carrier,
+        ),
+        step(
+          700,
+          1800,
+          "run",
+          "red2",
+          p(l.carrier.x + 8, 50),
+          p(l.carrier.x - 8, 42),
+        ),
+        step(1100, 1700, "defend", "blue1", p(21, 45), p(24, 40)),
+        step(2800, 500, "react", "nolan", undefined, undefined, "surprised"),
+      ]
+    : [
+        step(
+          200,
+          2200,
+          "dribble",
+          "blue1",
+          clampPoint(p(l.carrier.x - 10, l.carrier.y + 2)),
+          l.carrier,
+        ),
+        step(
+          700,
+          1800,
+          "defend",
+          "red1",
+          redStart ? clampPoint(p(redStart.x + 7, redStart.y)) : p(70, 34),
+          redStart ?? p(62, 34),
+        ),
+        step(
+          1100,
+          1700,
+          "run",
+          "blue2",
+          clampPoint(p(l.target.x - 8, l.target.y)),
+          l.target,
+        ),
+        step(2800, 500, "scan", "nolan", l.nolan, l.nolan),
+      ];
+  const setup = repairAnimationGeometry(l.actors, l.carrier, [
+    ...activeSetup,
+    ...supportingSetupSteps(l.actors, l.defending),
+  ]);
+  const buildSteps = (
+    label: string,
+    quality: "good" | "poor",
+    raw: AnimationStep[],
+  ) => {
+    const semantic = ensurePhoneReadableSteps(
+      label,
+      enforceOptionResult(label, quality, l, raw),
+      l,
+    );
+    const reactions = [
+      ...semantic,
+      ...supportingReactionSteps(l.actors, l.defending, quality),
+    ];
+    if (quality === "poor")
+      return ensurePhoneReadableSteps(
+        label,
+        repairAnimationGeometry(l.actors, l.carrier, reactions, setup),
+        l,
+      );
+    const opened = prepareClearBestPaths(l.actors, l.carrier, setup, reactions);
+    const cleared = prepareClearBestPaths(
+      l.actors,
+      l.carrier,
+      setup,
+      repairAnimationGeometry(l.actors, l.carrier, opened, setup),
+    );
+    return ensurePhoneReadableSteps(
+      label,
+      repairAnimationGeometry(l.actors, l.carrier, cleared, setup),
+      l,
+    );
+  };
+  let goodSteps = buildSteps(
+    meta.goodLabel,
+    "good",
+    goodAnimation(row, index, l),
+  );
+  let poorSteps = buildSteps(
+    meta.poorLabel,
+    "poor",
+    poorAnimation(row, index, l),
+  );
+  let goodChoice = alignChoicePreview(
+    semanticChoice(
+      "a",
+      meta.goodLabel,
+      neutralChoiceIcon(meta.goodLabel),
+      "good",
+      l,
+      goodSteps,
+      poorSteps,
+    ),
+    goodSteps,
+    l,
+  );
+  let poorChoice = alignChoicePreview(
+    semanticChoice(
+      "c",
+      meta.poorLabel,
+      neutralChoiceIcon(meta.poorLabel),
+      "poor",
+      l,
+      poorSteps,
+      goodSteps,
+    ),
+    poorSteps,
+    l,
+  );
+  ({ choice: goodChoice, steps: goodSteps } = synchronizeReadableChoice(
+    goodChoice,
+    goodSteps,
+    l,
+  ));
+  ({ choice: poorChoice, steps: poorSteps } = synchronizeReadableChoice(
+    poorChoice,
+    poorSteps,
+    l,
+  ));
+  if (visuallySameOnPhone(goodChoice, poorChoice)) {
+    poorSteps = repairAnimationGeometry(
+      l.actors,
+      l.carrier,
+      contrastSteps(poorSteps, goodChoice, l),
+      setup,
+    );
+    poorChoice = alignChoicePreview(
+      semanticChoice(
+        "c",
+        meta.poorLabel,
+        neutralChoiceIcon(meta.poorLabel),
+        "poor",
+        l,
+        poorSteps,
+        goodSteps,
+      ),
+      poorSteps,
+      l,
+    );
+    goodChoice = alignChoicePreview(
+      semanticChoice(
+        "a",
+        meta.goodLabel,
+        neutralChoiceIcon(meta.goodLabel),
+        "good",
+        l,
+        goodSteps,
+        poorSteps,
+      ),
+      goodSteps,
+      l,
+    );
+    ({ choice: goodChoice, steps: goodSteps } = synchronizeReadableChoice(
+      goodChoice,
+      goodSteps,
+      l,
+    ));
+    ({ choice: poorChoice, steps: poorSteps } = synchronizeReadableChoice(
+      poorChoice,
+      poorSteps,
+      l,
+    ));
+  }
+  goodSteps = repairAnimationGeometry(
+    l.actors,
+    l.carrier,
+    prepareClearBestPaths(l.actors, l.carrier, setup, goodSteps),
+    setup,
+  );
+  goodChoice = alignChoicePreview(
+    semanticChoice(
+      "a",
+      meta.goodLabel,
+      neutralChoiceIcon(meta.goodLabel),
+      "good",
+      l,
+      goodSteps,
+      poorSteps,
+    ),
+    goodSteps,
+    l,
+  );
+  ({ choice: goodChoice, steps: goodSteps } = synchronizeReadableChoice(
+    goodChoice,
+    goodSteps,
+    l,
+  ));
+  goodSteps = repairAnimationGeometry(l.actors, l.carrier, goodSteps, setup);
+  if (row.id === "TW-03")
+    goodSteps = appendSafeExit("red2", goodSteps, l, setup);
+  const alternateLabel = alternateLabels[row.id];
+  let alternateSteps = alternateLabel
+    ? buildSteps(alternateLabel, "good", alternateAnimation(row, l))
+    : undefined;
+  let alternateChoice =
+    alternateSteps && alternateLabel
+      ? alignChoicePreview(
+          semanticChoice(
+            "b",
+            alternateLabel,
+            neutralChoiceIcon(alternateLabel),
+            "good",
+            l,
+            alternateSteps,
+            goodSteps,
+          ),
+          alternateSteps,
+          l,
+        )
+      : undefined;
+  if (alternateSteps && alternateChoice)
+    ({ choice: alternateChoice, steps: alternateSteps } =
+      synchronizeReadableChoice(alternateChoice, alternateSteps, l));
+  if (
+    alternateSteps &&
+    alternateChoice &&
+    (visuallySameOnPhone(goodChoice, alternateChoice) ||
+      visuallySameOnPhone(poorChoice, alternateChoice))
+  ) {
+    alternateSteps = prepareClearBestPaths(
+      l.actors,
+      l.carrier,
+      setup,
+      repairAnimationGeometry(
+        l.actors,
+        l.carrier,
+        contrastSteps(alternateSteps, goodChoice, l, true),
+        setup,
+      ),
+    );
+    alternateChoice = alignChoicePreview(
+      semanticChoice(
+        "b",
+        alternateLabel!,
+        neutralChoiceIcon(alternateLabel!),
+        "good",
+        l,
+        alternateSteps,
+        goodSteps,
+      ),
+      alternateSteps,
+      l,
+    );
+  }
+  goodChoice = {
+    ...goodChoice,
+    predictionLabel: predictionLabel(row, "good", l.defending),
+  };
+  poorChoice = {
+    ...poorChoice,
+    predictionLabel: predictionLabel(row, "poor", l.defending),
+  };
+  if (alternateChoice)
+    alternateChoice = {
+      ...alternateChoice,
+      predictionLabel: predictionLabel(row, "alternate", l.defending),
+    };
+  const choices = [
+    goodChoice,
+    ...(alternateChoice ? [alternateChoice] : []),
+    poorChoice,
+  ];
+  const results = [
+    result("a", "best", row.good, row.decision, row.good, goodSteps),
+    ...(alternateSteps
+      ? [
+          result(
+            "b",
+            "good",
+            `Good option. ${row.good}`,
+            row.decision,
+            "The team also stays safe with this choice.",
+            alternateSteps,
+          ),
+        ]
+      : []),
+    result(
+      "c",
+      "poor",
+      row.poor,
+      `Try this instead: ${row.decision}`,
+      row.poor,
+      poorSteps,
+    ),
+  ];
+  return {
+    id: row.id,
+    title: meta.title,
+    category: categoryFor(row.id),
+    role: row.role,
+    stage: (1 + Math.floor((index % 8) / 3)) as SceneStage,
+    formalConcept: row.decision,
+    skillId: skillIdFor(row),
+    visibleCue: row.trigger,
+    playerDuty: row.decision,
+    introNarration: `Watch. ${row.trigger}`,
+    prompt: "What should Nolan do?",
+    pauseTime: 3800,
+    activeArea: l.activeArea,
+    ballStart: l.carrier,
+    actors: l.actors,
+    setupAnimation: setup,
+    choices,
+    results,
+  };
+}
+
+export const animatedScenarios = rows.map(makeScene);
+const packInfo: Record<SceneCategory, Omit<ScenePack, "id" | "scenes">> = {
+  winger: {
+    name: "Winger Games",
+    icon: "🪽",
+    color: "#11a968",
+    description: "Width, crossing, back-post runs, and tracking.",
+  },
+  striker: {
+    name: "Striker Games",
+    icon: "🎯",
+    color: "#f97316",
+    description: "Finishing, movement, hold-up play, rebounds, and pressing.",
+  },
+  "central-midfielder": {
+    name: "Midfielder Games",
+    icon: "🧭",
+    color: "#8b5cf6",
+    description: "Scan, switch, control tempo, support, and cover.",
+  },
+  "attacking-midfielder": {
+    name: "Attacking Midfielder Games",
+    icon: "🪄",
+    color: "#d946a8",
+    description: "Find pockets, turn, create chances, and counterpress.",
+  },
+  "defensive-midfielder": {
+    name: "Defensive Midfielder Games",
+    icon: "🚧",
+    color: "#64748b",
+    description: "Screen, cover, track runners, build, and delay counters.",
+  },
+  fullback: {
+    name: "Fullback Games",
+    icon: "🏃",
+    color: "#0ea5a0",
+    description: "Defend wide, overlap, underlap, and recover.",
+  },
+  "center-defender": {
+    name: "Center Defender Games",
+    icon: "🛡️",
+    color: "#2583da",
+    description: "Position, cover, control the line, and manage danger.",
+  },
+  goalkeeper: {
+    name: "Goalkeeper Games",
+    icon: "🧤",
+    color: "#e2a600",
+    description: "Set angles, sweep, parry, and distribute.",
+  },
+  teamwork: {
+    name: "Teamwork Games",
+    icon: "🤝",
+    color: "#db4c8b",
+    description: "Use space, combine, transition, and protect together.",
+  },
+};
+export const scenePacks: ScenePack[] = (
+  Object.keys(packInfo) as SceneCategory[]
+).map((id) => ({
+  id,
+  ...packInfo[id],
+  scenes: animatedScenarios.filter((scene) => scene.category === id),
+}));
+export const sceneById = (id: string) =>
+  animatedScenarios.find((scene) => scene.id === id);
+export const packById = (id: string) =>
+  scenePacks.find((pack) => pack.id === id);

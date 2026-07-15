@@ -34,8 +34,13 @@ Every scenario is mapped to an observable child skill, a visible match cue, a ro
 - a highlighted active-play area showing where the current decision matters;
 - clearly labeled blue and red goals with opponent-goal shot validation;
 - immediate “Choose again,” replay, side-by-side comparison, speech synthesis, and saved local progress;
+- shuffled answer positions and neutral action icons, so card order and symbols never reveal the best strategy;
+- real Stage 2 outcome predictions plus a visible match-cue banner during every decision;
+- a **Practice Again** pack that resurfaces missed stories until the best strategy is demonstrated;
+- normal-speed and half-speed consequence replay driven by one elapsed-time animation clock;
+- younger/older soccer-language modes for terms such as counterpress, underlap, recycle, and half-turn;
 - a saved player-name setting used on the field and in coaching, with **Tom** as the default;
-- saved strategy scoring: 3 points for the best choice, 2 for another safe choice, and 1 for a learning choice, capped at 3 per story;
+- saved strategy scoring: 3 points for the best first choice, 2 for another safe first choice, 0 for a miss, and 1 comeback point after correcting a miss;
 - press-and-hold Parent Mode with progress by role and coaching concepts;
 - a transparent option-centered 100-point design audit in Parent Mode with exact per-case failure reasons;
 - responsive phone and landscape layouts with reduced-motion support;
@@ -73,6 +78,7 @@ Then run:
 npm run build
 npm test -- --run
 npm run test:e2e
+npm run format:check
 ```
 
 Playwright runs in desktop Chromium, iPhone-sized Chromium, and iPhone-sized WebKit. Additional commands:
@@ -81,10 +87,11 @@ Playwright runs in desktop Chromium, iPhone-sized Chromium, and iPhone-sized Web
 npm run test:watch
 npm run test:e2e:ui
 npm run preview
+npm run format
 ```
 
 ## Completion status
 
-Implemented: 30 playable scenarios for each of the eight positional roles, plus 10 teamwork stories; 61 mapped child skills; animated active opponents; option-centered design scoring with a visible score for every individual option; receiver, body-occlusion, phone-rendered option contrast, trajectory, option-preview/consequence agreement, and goal-direction validation; scoring, saved progress, Parent Mode, speech, replay, re-choose, and side-by-side comparison. The automated suite currently contains 34 curriculum/unit tests and 33 browser tests across desktop Chromium, phone-sized Chromium, and phone-sized WebKit.
+Implemented: 30 playable scenarios for each of the eight positional roles, plus 10 teamwork stories; 61 mapped child skills; animated active opponents; neutral shuffled choices; working outcome predictions; visible cues; adaptive practice; comeback scoring; slow replay; age-adjusted terminology; option-centered design scoring; receiver, body-occlusion, phone-rendered option contrast, trajectory, option-preview/consequence agreement, and goal-direction validation; saved progress, Parent Mode, speech, replay, re-choose, and side-by-side comparison. Source formatting is enforced in CI. The automated suite currently contains 37 curriculum/unit tests and 36 browser tests across desktop Chromium, phone-sized Chromium, and phone-sized WebKit.
 
-Remaining: the 250-story curriculum is data-driven and passes the automated football-consistency gates, but it has not been independently certified by a licensed youth coach. That human coaching review is the only outstanding curriculum-validation step; it is not represented as complete here.
+Remaining: 65 core stories come from the detailed reviewed inventory; 185 expansion stories use varied, quality-gated generation and improved coaching language. Those 185 stories have not each received an independent human editorial pass, and the full curriculum has not been certified by a licensed youth coach. Automated originality and football-consistency checks are not represented as a substitute for that human curriculum review.

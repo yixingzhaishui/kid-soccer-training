@@ -1,22 +1,315 @@
-import { animatedScenarios,scenePacks } from '../lessons';
-import { cleanChildName,displayChildName,personalizeText } from '../logic/personalize';
-import { resetProgress,totalScore } from '../logic/progress';
-import { scoreCurriculum,scoreScenario } from '../logic/scenarioQuality';
-import type { Progress,Settings } from '../types/soccer';
+import { animatedScenarios, scenePacks } from "../lessons";
+import {
+  cleanChildName,
+  displayChildName,
+  personalizeText,
+} from "../logic/personalize";
+import { resetProgress, totalScore } from "../logic/progress";
+import { scoreCurriculum, scoreScenario } from "../logic/scenarioQuality";
+import type { Progress, Settings } from "../types/soccer";
 
-type Props={progress:Progress;settings:Settings;onSettings:(settings:Settings)=>void;onProgress:(progress:Progress)=>void;onClose:()=>void};
+type Props = {
+  progress: Progress;
+  settings: Settings;
+  onSettings: (settings: Settings) => void;
+  onProgress: (progress: Progress) => void;
+  onClose: () => void;
+};
+const curriculumQuality = scoreCurriculum(animatedScenarios);
+const maximumStrategyScore = animatedScenarios.length * 3;
 
-export function ParentModeScreen({progress,settings,onSettings,onProgress,onClose}:Props){
-  const complete=Object.values(progress.sceneResults).filter((item)=>item.completed).length;
-  const score=totalScore(progress),best=Object.values(progress.sceneResults).reduce((sum,item)=>sum+item.best,0),poor=Object.values(progress.sceneResults).reduce((sum,item)=>sum+item.poor,0);
-  const last=animatedScenarios.find((scene)=>scene.id===progress.lastSceneId),name=displayChildName(settings.childName),text=(value:string)=>personalizeText(value,name),quality=scoreCurriculum(animatedScenarios),minimumQuality=Math.min(...quality.map((item)=>item.score)),averageQuality=Math.round(quality.reduce((sum,item)=>sum+item.score,0)/quality.length),failed=quality.filter((item)=>item.hardFailures.length),failureCount=failed.reduce((sum,item)=>sum+item.hardFailures.length,0);
-  return <main className="screen parent-screen">
-    <header className="screen-header"><button className="icon-button" onClick={onClose}>‹</button><div><p className="eyebrow">GROWN-UP VIEW</p><h1>Parent notes</h1></div><div/></header>
-    <div className="parent-summary"><article><strong>{score}/750</strong><span>strategy points</span></article><article><strong>{complete}</strong><span>stories played</span></article><article><strong>{best}</strong><span>best choices</span></article><article><strong>{poor}</strong><span>learning tries</span></article></div>
-    <section className="parent-panel quality-panel"><h2>Scenario quality audit</h2><div className="quality-summary"><span><strong>{minimumQuality}/100</strong><small>lowest case score</small></span><span><strong>{averageQuality}/100</strong><small>curriculum average</small></span><span><strong>{quality.filter((item)=>item.score>96).length}/{quality.length}</strong><small>cases above 96</small></span></div><p>Hard gates now reject hidden or overlapping players, unreachable receivers, look-alike option routes, label/action contradictions, and unsafe ball paths. A hard-gate failure caps the case at 95.</p><details className="quality-details"><summary>Check audit details: {failed.length} failed cases · {failureCount} failures</summary>{failed.map((item)=><article key={item.sceneId}><strong>{item.sceneId} · {item.score}/100</strong><ul>{item.hardFailures.map((failure,index)=><li key={`${failure.code}-${index}`}><b>{failure.code.replaceAll('_',' ')}</b>: {failure.message}</li>)}</ul></article>)}</details></section>
-    <section className="parent-panel"><h2>Progress by story pack</h2>{scenePacks.map((pack)=>{const done=pack.scenes.filter((scene)=>progress.sceneResults[scene.id]?.completed).length;const packScore=pack.scenes.reduce((sum,scene)=>sum+(progress.sceneResults[scene.id]?.score??0),0),qualityMin=Math.min(...pack.scenes.map((scene)=>scoreScenario(scene).score));return <div className="parent-pack" key={pack.id}><span>{pack.icon} <strong>{pack.name}</strong><small>{done}/{pack.scenes.length} · ⭐ {packScore} · Quality {qualityMin}/100</small></span><progress value={done} max={pack.scenes.length}/></div>})}</section>
-    <section className="parent-panel"><h2>Latest coaching idea</h2>{last?(()=>{const audit=scoreScenario(last);return <><h3>{last.title} <small className="quality-badge">{audit.score}/100 case quality</small></h3><p><strong>Skill:</strong> {last.skillId}</p><p><strong>Visible cue:</strong> {text(last.visibleCue)}</p><p><strong>{name}'s duty:</strong> {text(last.playerDuty)}</p><p>{text(last.results.find((item)=>item.choiceId===progress.sceneResults[last.id]?.lastChoiceId)?.explanation??'')}</p><h4>Option design scores</h4><ul>{audit.optionScores.map((option)=><li key={option.choiceId}><strong>{option.label}: {option.score}/10</strong>{option.issues.length?` — ${option.issues.join('; ')}`:' — available, distinct, role-correct, and matched to its consequence'}</li>)}</ul><h4>Exact score details</h4><ul>{audit.criteria.map((criterion)=><li key={criterion.id}><strong>{criterion.label}: {criterion.earned}/{criterion.maximum}</strong> — {criterion.detail}</li>)}</ul>{audit.hardFailures.length>0&&<><h4>Hard-gate failures</h4><ul>{audit.hardFailures.map((failure,index)=><li key={`${failure.code}-${index}`}>{failure.message}</li>)}</ul></>}</>})():<p>Play a story to see coaching notes.</p>}</section>
-    <section className="parent-panel"><h2>Settings</h2><label className="name-setting"><span><strong>Player name</strong><small>Used on the field and in spoken coaching</small></span><input aria-label="Player name in parent settings" value={settings.childName} maxLength={20} onChange={(event)=>onSettings({...settings,childName:cleanChildName(event.target.value)})} onBlur={()=>onSettings({...settings,childName:name})}/></label><label className="toggle-row"><span><strong>Spoken coaching</strong><small>Use the browser’s child-friendly voice</small></span><input type="checkbox" checked={settings.speechEnabled} onChange={(event)=>onSettings({...settings,speechEnabled:event.target.checked})}/></label><label className="toggle-row"><span><strong>Reduce movement</strong><small>Use shorter, gentler animations</small></span><input type="checkbox" checked={settings.reducedMotion} onChange={(event)=>onSettings({...settings,reducedMotion:event.target.checked})}/></label></section>
-    <section className="parent-panel danger-panel"><h2>Start over</h2><button className="danger-button" onClick={()=>onProgress(resetProgress())}>Reset all story progress</button></section>
-  </main>;
+export function ParentModeScreen({
+  progress,
+  settings,
+  onSettings,
+  onProgress,
+  onClose,
+}: Props) {
+  const complete = Object.values(progress.sceneResults).filter(
+    (item) => item.completed,
+  ).length;
+  const score = totalScore(progress),
+    best = Object.values(progress.sceneResults).reduce(
+      (sum, item) => sum + item.best,
+      0,
+    ),
+    poor = Object.values(progress.sceneResults).reduce(
+      (sum, item) => sum + item.poor,
+      0,
+    );
+  const last = animatedScenarios.find(
+      (scene) => scene.id === progress.lastSceneId,
+    ),
+    name = displayChildName(settings.childName),
+    text = (value: string) => personalizeText(value, name),
+    quality = curriculumQuality,
+    minimumQuality = Math.min(...quality.map((item) => item.score)),
+    averageQuality = Math.round(
+      quality.reduce((sum, item) => sum + item.score, 0) / quality.length,
+    ),
+    failed = quality.filter((item) => item.hardFailures.length),
+    failureCount = failed.reduce(
+      (sum, item) => sum + item.hardFailures.length,
+      0,
+    );
+  return (
+    <main className="screen parent-screen">
+      <header className="screen-header">
+        <button className="icon-button" onClick={onClose}>
+          ‹
+        </button>
+        <div>
+          <p className="eyebrow">GROWN-UP VIEW</p>
+          <h1>Parent notes</h1>
+        </div>
+        <div />
+      </header>
+      <div className="parent-summary">
+        <article>
+          <strong>
+            {score}/{maximumStrategyScore}
+          </strong>
+          <span>strategy points</span>
+        </article>
+        <article>
+          <strong>{complete}</strong>
+          <span>stories played</span>
+        </article>
+        <article>
+          <strong>{best}</strong>
+          <span>best choices</span>
+        </article>
+        <article>
+          <strong>{poor}</strong>
+          <span>learning tries</span>
+        </article>
+      </div>
+      <section className="parent-panel quality-panel">
+        <h2>Scenario quality audit</h2>
+        <div className="quality-summary">
+          <span>
+            <strong>{minimumQuality}/100</strong>
+            <small>lowest case score</small>
+          </span>
+          <span>
+            <strong>{averageQuality}/100</strong>
+            <small>curriculum average</small>
+          </span>
+          <span>
+            <strong>
+              {quality.filter((item) => item.score > 96).length}/
+              {quality.length}
+            </strong>
+            <small>cases above 96</small>
+          </span>
+        </div>
+        <p>
+          Hard gates now reject hidden or overlapping players, unreachable
+          receivers, look-alike option routes, label/action contradictions, and
+          unsafe ball paths. A hard-gate failure caps the case at 95.
+        </p>
+        <details className="quality-details">
+          <summary>
+            Check audit details: {failed.length} failed cases · {failureCount}{" "}
+            failures
+          </summary>
+          {failed.map((item) => (
+            <article key={item.sceneId}>
+              <strong>
+                {item.sceneId} · {item.score}/100
+              </strong>
+              <ul>
+                {item.hardFailures.map((failure, index) => (
+                  <li key={`${failure.code}-${index}`}>
+                    <b>{failure.code.replaceAll("_", " ")}</b>:{" "}
+                    {failure.message}
+                  </li>
+                ))}
+              </ul>
+            </article>
+          ))}
+        </details>
+      </section>
+      <section className="parent-panel">
+        <h2>Progress by story pack</h2>
+        {scenePacks.map((pack) => {
+          const done = pack.scenes.filter(
+            (scene) => progress.sceneResults[scene.id]?.completed,
+          ).length;
+          const packScore = pack.scenes.reduce(
+              (sum, scene) =>
+                sum + (progress.sceneResults[scene.id]?.score ?? 0),
+              0,
+            ),
+            qualityMin = Math.min(
+              ...pack.scenes.map((scene) => scoreScenario(scene).score),
+            );
+          return (
+            <div className="parent-pack" key={pack.id}>
+              <span>
+                {pack.icon} <strong>{pack.name}</strong>
+                <small>
+                  {done}/{pack.scenes.length} · ⭐ {packScore} · Quality{" "}
+                  {qualityMin}/100
+                </small>
+              </span>
+              <progress value={done} max={pack.scenes.length} />
+            </div>
+          );
+        })}
+      </section>
+      <section className="parent-panel">
+        <h2>Latest coaching idea</h2>
+        {last ? (
+          (() => {
+            const audit = scoreScenario(last);
+            return (
+              <>
+                <h3>
+                  {last.title}{" "}
+                  <small className="quality-badge">
+                    {audit.score}/100 case quality
+                  </small>
+                </h3>
+                <p>
+                  <strong>Skill:</strong> {text(last.formalConcept)}
+                </p>
+                <p>
+                  <strong>Visible cue:</strong> {text(last.visibleCue)}
+                </p>
+                <p>
+                  <strong>{name}'s duty:</strong> {text(last.playerDuty)}
+                </p>
+                <p>
+                  {text(
+                    last.results.find(
+                      (item) =>
+                        item.choiceId ===
+                        progress.sceneResults[last.id]?.lastChoiceId,
+                    )?.explanation ?? "",
+                  )}
+                </p>
+                <h4>Option design scores</h4>
+                <ul>
+                  {audit.optionScores.map((option) => (
+                    <li key={option.choiceId}>
+                      <strong>
+                        {option.label}: {option.score}/10
+                      </strong>
+                      {option.issues.length
+                        ? ` — ${option.issues.join("; ")}`
+                        : " — available, distinct, role-correct, and matched to its consequence"}
+                    </li>
+                  ))}
+                </ul>
+                <h4>Exact score details</h4>
+                <ul>
+                  {audit.criteria.map((criterion) => (
+                    <li key={criterion.id}>
+                      <strong>
+                        {criterion.label}: {criterion.earned}/
+                        {criterion.maximum}
+                      </strong>{" "}
+                      — {criterion.detail}
+                    </li>
+                  ))}
+                </ul>
+                {audit.hardFailures.length > 0 && (
+                  <>
+                    <h4>Hard-gate failures</h4>
+                    <ul>
+                      {audit.hardFailures.map((failure, index) => (
+                        <li key={`${failure.code}-${index}`}>
+                          {failure.message}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+              </>
+            );
+          })()
+        ) : (
+          <p>Play a story to see coaching notes.</p>
+        )}
+      </section>
+      <section className="parent-panel">
+        <h2>Settings</h2>
+        <label className="name-setting">
+          <span>
+            <strong>Player name</strong>
+            <small>Used on the field and in spoken coaching</small>
+          </span>
+          <input
+            aria-label="Player name in parent settings"
+            value={settings.childName}
+            maxLength={20}
+            onChange={(event) =>
+              onSettings({
+                ...settings,
+                childName: cleanChildName(event.target.value),
+              })
+            }
+            onBlur={() => onSettings({ ...settings, childName: name })}
+          />
+        </label>
+        <label className="name-setting">
+          <span>
+            <strong>Soccer words</strong>
+            <small>
+              Younger mode explains advanced terms in plain language
+            </small>
+          </span>
+          <select
+            aria-label="Soccer language level"
+            value={settings.languageLevel}
+            onChange={(event) =>
+              onSettings({
+                ...settings,
+                languageLevel: event.target.value as Settings["languageLevel"],
+              })
+            }
+          >
+            <option value="younger">Younger player</option>
+            <option value="older">Older player</option>
+          </select>
+        </label>
+        <label className="toggle-row">
+          <span>
+            <strong>Spoken coaching</strong>
+            <small>Use the browser’s child-friendly voice</small>
+          </span>
+          <input
+            type="checkbox"
+            checked={settings.speechEnabled}
+            onChange={(event) =>
+              onSettings({ ...settings, speechEnabled: event.target.checked })
+            }
+          />
+        </label>
+        <label className="toggle-row">
+          <span>
+            <strong>Reduce movement</strong>
+            <small>Use shorter, gentler animations</small>
+          </span>
+          <input
+            type="checkbox"
+            checked={settings.reducedMotion}
+            onChange={(event) =>
+              onSettings({ ...settings, reducedMotion: event.target.checked })
+            }
+          />
+        </label>
+      </section>
+      <section className="parent-panel danger-panel">
+        <h2>Start over</h2>
+        <button
+          className="danger-button"
+          onClick={() => onProgress(resetProgress())}
+        >
+          Reset all story progress
+        </button>
+      </section>
+    </main>
+  );
 }

@@ -1,19 +1,144 @@
-import type {Action,AnimatedChoice,AnimatedScenario,ChoiceResult,Point} from '../types/soccer';
+import type {
+  Action,
+  AnimatedChoice,
+  AnimatedScenario,
+  ChoiceResult,
+  Point,
+} from "../types/soccer";
 
-export type OptionIntent='hold'|'active-hold'|'closed-receive'|'orient'|'travel'|'ball'|'ball-travel'|'ball-hold'|'defend'|'other';
-const hold=/stand|watch|wait high|stay on line|stay central|hold position|celebrate early|complain|receive without scanning/i;
-const travel=/\b(?:run|sprint|move|recover|track|arrive|slide|drop|step|press)\b|come short|go wide|close down|attack (?:near|far|back)|get goal-side|^(?:overlap|underlap)$/i;
-const orient=/scan|half turn|back foot|open (?:body|safe side)|body angle|body shape|show outside|set and narrow|turn through|read the pressure|read defender/i;
-const ball=/^(?:pass|play|switch|cross|cut|shoot|finish|clear|roll|throw|lay|recycle|release|push|parry|tip)|distribution/i;
-const defend=/block|cover|screen|delay|mark|protect|guide|intercept|tackle|jockey|goal-side/i;
-export const movementActions=new Set<Action>(['run','walk','turn','dribble','defend','scan','press','shield','set','dive']);
-export const kickActions=new Set<Action>(['pass','cross','shoot','clear','parry']);
+export type OptionIntent =
+  | "hold"
+  | "active-hold"
+  | "closed-receive"
+  | "orient"
+  | "travel"
+  | "ball"
+  | "ball-travel"
+  | "ball-hold"
+  | "defend"
+  | "other";
+const hold =
+  /stand|watch|wait high|stay on line|stay central|hold position|celebrate early|complain|receive without scanning/i;
+const travel =
+  /\b(?:run|sprint|move|recover|track|arrive|slide|drop|step|press)\b|come short|go wide|close down|attack (?:near|far|back)|get goal-side|^(?:overlap|underlap)$/i;
+const orient =
+  /scan|half turn|back foot|open (?:body|safe side)|body angle|body shape|show outside|set and narrow|turn through|read the pressure|read defender/i;
+const ball =
+  /^(?:pass|play|switch|cross|cut|shoot|finish|clear|roll|throw|lay|recycle|release|push|parry|tip)|distribution/i;
+const defend =
+  /block|cover|screen|delay|mark|protect|guide|intercept|tackle|jockey|goal-side/i;
+export const movementActions = new Set<Action>([
+  "run",
+  "walk",
+  "turn",
+  "dribble",
+  "defend",
+  "scan",
+  "press",
+  "shield",
+  "set",
+  "dive",
+]);
+export const kickActions = new Set<Action>([
+  "pass",
+  "cross",
+  "shoot",
+  "clear",
+  "parry",
+]);
 
-export function optionIntent(label:string):OptionIntent{if(/pass and (?:continue|run)/i.test(label))return'ball-travel';if(/pass and (?:stop|wait)/i.test(label))return'ball-hold';if(/hold position|stay and protect/i.test(label))return'active-hold';if(/receive without scanning/i.test(label))return'closed-receive';if(hold.test(label))return'hold';if(orient.test(label))return'orient';if(travel.test(label))return'travel';if(ball.test(label))return'ball';if(defend.test(label))return'defend';return'other'}
-export const pointDistance=(a:Point,b:Point)=>Math.hypot(a.x-b.x,a.y-b.y);
-export function previewMove(choice:AnimatedChoice,fallback:Point){const step=choice.previewAnimation.find((item)=>item.actorId==='nolan')!;return{step,from:step?.from??fallback,to:step?.to??fallback}}
+export function optionIntent(label: string): OptionIntent {
+  if (/pass and (?:continue|run)/i.test(label)) return "ball-travel";
+  if (/pass and (?:stop|wait)/i.test(label)) return "ball-hold";
+  if (/hold position|stay and protect/i.test(label)) return "active-hold";
+  if (/receive without scanning/i.test(label)) return "closed-receive";
+  if (hold.test(label)) return "hold";
+  if (orient.test(label)) return "orient";
+  if (travel.test(label)) return "travel";
+  if (ball.test(label)) return "ball";
+  if (defend.test(label)) return "defend";
+  return "other";
+}
+export const pointDistance = (a: Point, b: Point) =>
+  Math.hypot(a.x - b.x, a.y - b.y);
+export function previewMove(choice: AnimatedChoice, fallback: Point) {
+  const step = choice.previewAnimation.find((item) => item.actorId === "nolan");
+  return { step, from: step?.from ?? fallback, to: step?.to ?? fallback };
+}
 
-export type SemanticIssue={sceneId:string;choiceId:string;message:string};
-export function semanticIssues(scene:AnimatedScenario):SemanticIssue[]{const nolan=scene.actors.find((actor)=>actor.id==='nolan')!,issues:SemanticIssue[]=[];for(const choice of scene.choices){const intent=optionIntent(choice.label),move=previewMove(choice,nolan.start),distance=pointDistance(move.from,move.to),result=scene.results.find((item)=>item.choiceId===choice.id)!,roleSteps=result.animationSteps.filter((item)=>item.actorId==='nolan'),roleTravel=roleSteps.filter((item)=>item.from&&item.to&&movementActions.has(item.action)).reduce((max,item)=>Math.max(max,pointDistance(item.from!,item.to!)),0);const add=(message:string)=>issues.push({sceneId:scene.id,choiceId:choice.id,message});if((intent==='hold'||intent==='closed-receive'||intent==='ball-hold'||intent==='active-hold')&&(distance>1.5||roleTravel>2.5))add('holding/watching option moves the active role');if((intent==='travel'||intent==='ball-travel')&&(distance<3.5||roleTravel<3.5))add('run/recovery option lacks a meaningful role path');if((intent==='orient'||intent==='active-hold')&&(!choice.previewFacing||Math.abs(choice.previewFacing.to-choice.previewFacing.from)<45))add('orientation option does not visibly turn the body');if(intent==='closed-receive'&&roleSteps.some((item)=>item.action==='scan'))add('receive-without-scanning option contains a scan');if(intent==='ball'||intent==='ball-travel'||intent==='ball-hold'){if(!choice.previewBall)add('ball option has no ball preview');if(!roleSteps.some((item)=>kickActions.has(item.action)))add('active role never performs the named ball action')}if(choice.previewBall&&pointDistance(choice.previewBall.from,choice.previewBall.to)<3)add('ball preview has no meaningful travel')}return issues}
+export type SemanticIssue = {
+  sceneId: string;
+  choiceId: string;
+  message: string;
+};
+export function semanticIssues(scene: AnimatedScenario): SemanticIssue[] {
+  const nolan = scene.actors.find((actor) => actor.id === "nolan")!,
+    issues: SemanticIssue[] = [];
+  for (const choice of scene.choices) {
+    const intent = optionIntent(choice.label),
+      move = previewMove(choice, nolan.start),
+      distance = pointDistance(move.from, move.to),
+      result = scene.results.find((item) => item.choiceId === choice.id)!,
+      roleSteps = result.animationSteps.filter(
+        (item) => item.actorId === "nolan",
+      ),
+      roleTravel = roleSteps
+        .filter(
+          (item) => item.from && item.to && movementActions.has(item.action),
+        )
+        .reduce(
+          (max, item) => Math.max(max, pointDistance(item.from!, item.to!)),
+          0,
+        );
+    const add = (message: string) =>
+      issues.push({ sceneId: scene.id, choiceId: choice.id, message });
+    if (
+      (intent === "hold" ||
+        intent === "closed-receive" ||
+        intent === "ball-hold" ||
+        intent === "active-hold") &&
+      (distance > 1.5 || roleTravel > 2.5)
+    )
+      add("holding/watching option moves the active role");
+    if (
+      (intent === "travel" || intent === "ball-travel") &&
+      (distance < 3.5 || roleTravel < 3.5)
+    )
+      add("run/recovery option lacks a meaningful role path");
+    if (
+      (intent === "orient" || intent === "active-hold") &&
+      (!choice.previewFacing ||
+        Math.abs(choice.previewFacing.to - choice.previewFacing.from) < 45)
+    )
+      add("orientation option does not visibly turn the body");
+    if (
+      intent === "closed-receive" &&
+      roleSteps.some((item) => item.action === "scan")
+    )
+      add("receive-without-scanning option contains a scan");
+    if (
+      intent === "ball" ||
+      intent === "ball-travel" ||
+      intent === "ball-hold"
+    ) {
+      if (!choice.previewBall) add("ball option has no ball preview");
+      if (!roleSteps.some((item) => kickActions.has(item.action)))
+        add("active role never performs the named ball action");
+    }
+    if (
+      choice.previewBall &&
+      pointDistance(choice.previewBall.from, choice.previewBall.to) < 3
+    )
+      add("ball preview has no meaningful travel");
+  }
+  return issues;
+}
 
-export function semanticIssuesForResult(scene:AnimatedScenario,result:ChoiceResult){return semanticIssues(scene).filter((item)=>item.choiceId===result.choiceId)}
+export function semanticIssuesForResult(
+  scene: AnimatedScenario,
+  result: ChoiceResult,
+) {
+  return semanticIssues(scene).filter(
+    (item) => item.choiceId === result.choiceId,
+  );
+}

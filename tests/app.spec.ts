@@ -1,28 +1,301 @@
-import {expect,test,type Page} from '@playwright/test';
+import { expect, test, type Page } from "@playwright/test";
 
-async function openScene(page:Page,pack:string,scene:string){await page.goto('/');await page.getByRole('button',{name:/Play soccer/i}).click();await page.getByRole('button',{name:new RegExp(pack,'i')}).click();await page.getByRole('button',{name:new RegExp(scene,'i')}).click();await expect(page.getByText('Watch the game…')).toBeVisible()}
-async function waitForChoice(page:Page,name:string){await expect(page.getByRole('button',{name})).toBeVisible({timeout:6000})}
+async function openScene(page: Page, pack: string, scene: string) {
+  await page.goto("/");
+  await page.getByRole("button", { name: /Play soccer/i }).click();
+  await page.getByRole("button", { name: new RegExp(pack, "i") }).click();
+  await page.getByRole("button", { name: new RegExp(scene, "i") }).click();
+  await expect(page.getByText("Watch the game…")).toBeVisible();
+}
+async function waitForChoice(page: Page, name: string) {
+  await expect(page.getByRole("button", { name })).toBeVisible({
+    timeout: 6000,
+  });
+}
 
-test.beforeEach(async({page})=>{await page.goto('/');await page.evaluate(()=>localStorage.clear())});
+test.beforeEach(async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => localStorage.clear());
+});
 
-test('a role scene plays before showing large visual choices',async({page})=>{await openScene(page,'Winger Games','Stay Wide');await expect(page.locator('.cartoon-player')).toHaveCount(14);await expect(page.locator('.active-play-area')).toBeVisible();await expect(page.getByLabel(/Active area: wide attack/i)).toBeVisible();const field=page.locator('.scene-canvas').first(),ball=page.getByTestId('game-ball');await expect(ball).toBeVisible();expect((await ball.boundingBox())?.width).toBeGreaterThan(10);expect((await field.boundingBox())?.width).toBeGreaterThan(360);await expect(page.getByRole('button',{name:'Stay wide'})).toHaveCount(0);const teammate=page.locator('[data-actor-id="blue1"]');const before=await teammate.getAttribute('style');await waitForChoice(page,'Stay wide');expect(await teammate.getAttribute('style')).not.toBe(before);await expect(page.locator('.choice-preview')).toHaveCount(2);await expect(page.locator('[data-testid^="role-path-"]')).toHaveCount(2);expect((await page.locator('.choice-preview').first().boundingBox())?.width).toBeGreaterThan(120);await expect(page.getByRole('button',{name:'Stay wide'})).toBeInViewport()});
+test("a role scene plays before showing large visual choices", async ({
+  page,
+}) => {
+  await openScene(page, "Winger Games", "Stay Wide");
+  await expect(page.locator(".cartoon-player")).toHaveCount(14);
+  await expect(page.locator(".active-play-area")).toBeVisible();
+  await expect(page.getByLabel(/Active area: wide attack/i)).toBeVisible();
+  const field = page.locator(".scene-canvas").first(),
+    ball = page.getByTestId("game-ball");
+  await expect(ball).toBeVisible();
+  expect((await ball.boundingBox())?.width).toBeGreaterThan(10);
+  expect((await field.boundingBox())?.width).toBeGreaterThan(360);
+  await expect(page.getByRole("button", { name: "Stay wide" })).toHaveCount(0);
+  const teammate = page.locator('[data-actor-id="blue1"]');
+  const before = await teammate.getAttribute("style");
+  await waitForChoice(page, "Stay wide");
+  expect(await teammate.getAttribute("style")).not.toBe(before);
+  await expect(page.locator(".choice-preview")).toHaveCount(2);
+  await expect(page.locator('[data-testid^="role-path-"]')).toHaveCount(2);
+  expect(
+    (await page.locator(".choice-preview").first().boundingBox())?.width,
+  ).toBeGreaterThan(120);
+  await expect(
+    page.getByRole("button", { name: "Stay wide" }),
+  ).toBeInViewport();
+});
 
-test('a poor consequence explains, replays, and compares',async({page})=>{await openScene(page,'Winger Games','Stay Wide');await waitForChoice(page,'Stay wide');await page.getByRole('button',{name:'Crowd the ball'}).click();await expect(page.getByText('See what happens…')).toBeVisible();await expect(page.getByText('See what happened?')).toBeVisible({timeout:6000});await expect(page.getByRole('paragraph').filter({hasText:/Two blue players occupy one lane/i})).toBeVisible();await page.getByRole('button',{name:/Replay result/i}).click();await expect(page.getByText('See what happened?')).toBeVisible({timeout:6000});await page.getByRole('button',{name:/Compare choices/i}).click();await expect(page.getByRole('heading',{name:/Your choice and another choice/i})).toBeVisible();await expect(page.locator('.comparison-grid .scene-canvas')).toHaveCount(2);await page.getByRole('button',{name:/Replay both/i}).click();await expect(page.getByText(/This choice solves the game problem/i)).toBeVisible()});
+test("a poor consequence explains, replays, and compares", async ({ page }) => {
+  await openScene(page, "Winger Games", "Stay Wide");
+  await waitForChoice(page, "Stay wide");
+  await page.getByRole("button", { name: "Crowd the ball" }).click();
+  await expect(page.getByText("See what happens…")).toBeVisible();
+  await expect(page.getByText("See what happened?")).toBeVisible({
+    timeout: 6000,
+  });
+  await expect(
+    page
+      .getByRole("paragraph")
+      .filter({ hasText: /Two blue players occupy one lane/i }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /Replay result/i }).click();
+  await expect(page.getByText("See what happened?")).toBeVisible({
+    timeout: 6000,
+  });
+  await page.getByRole("button", { name: /Compare choices/i }).click();
+  await expect(
+    page.getByRole("heading", { name: /Your choice and another choice/i }),
+  ).toBeVisible();
+  await expect(page.locator(".comparison-grid .scene-canvas")).toHaveCount(2);
+  await page.getByRole("button", { name: /Replay both/i }).click();
+  await expect(
+    page.getByText(/This choice solves the game problem/i),
+  ).toBeVisible();
+});
 
-test('every role pack includes a scene with two acceptable choices',async({page})=>{await openScene(page,'Teamwork Games','Support Triangle');await waitForChoice(page,'Make a triangle');await page.getByRole('button',{name:'Use other corner'}).click();await expect(page.getByText('Good choice!')).toBeVisible({timeout:6000});await expect(page.getByText(/Good option/i)).toBeVisible();await page.getByRole('button',{name:/Watch the whole scene/i}).click();await waitForChoice(page,'Make a triangle');await page.getByRole('button',{name:'Make a triangle'}).click();await expect(page.getByText('Great choice!')).toBeVisible({timeout:6000})});
+test("every role pack includes a scene with two acceptable choices", async ({
+  page,
+}) => {
+  await openScene(page, "Teamwork Games", "Support Triangle");
+  await waitForChoice(page, "Make a triangle");
+  await page.getByRole("button", { name: "Use other corner" }).click();
+  await expect(page.getByText("Good choice!")).toBeVisible({ timeout: 6000 });
+  await expect(page.getByText(/Good option/i)).toBeVisible();
+  await page.getByRole("button", { name: /Watch the whole scene/i }).click();
+  await waitForChoice(page, "Make a triangle");
+  await page.getByRole("button", { name: "Make a triangle" }).click();
+  await expect(page.getByText("Great choice!")).toBeVisible({ timeout: 6000 });
+});
 
-test('progress persists and parent mode reports the 250-scene curriculum',async({page})=>{await openScene(page,'Winger Games','Stay Wide');await waitForChoice(page,'Stay wide');await page.getByRole('button',{name:'Stay wide'}).click();await expect(page.getByText('Great choice!')).toBeVisible({timeout:7000});await page.reload();await expect(page.getByText('1 of 250 stories played')).toBeVisible();const parent=page.getByRole('button',{name:/Parent mode/i});await parent.dispatchEvent('pointerdown',{pointerType:'mouse'});await expect(page.getByRole('heading',{name:'Parent notes'})).toBeVisible({timeout:3000});await expect(page.getByText('Hold width to receive instead of crowding the ball',{exact:true})).toBeVisible();await expect(page.getByText('cases above 96')).toBeVisible();await expect(page.getByText(/Check audit details: 0 failed cases · 0 failures/)).toBeVisible();await expect(page.getByText('Goalkeeper Games')).toBeVisible();await page.getByRole('button',{name:'Reset all story progress'}).click();expect(await page.evaluate(()=>localStorage.getItem('nolan-animation-progress-v1'))).toContain('"sceneResults":{}')});
+test("progress persists and parent mode reports the 250-scene curriculum", async ({
+  page,
+}) => {
+  await openScene(page, "Winger Games", "Stay Wide");
+  await waitForChoice(page, "Stay wide");
+  await page.getByRole("button", { name: "Stay wide" }).click();
+  await expect(page.getByText("Great choice!")).toBeVisible({ timeout: 7000 });
+  await page.reload();
+  await expect(page.getByText("1 of 250 stories played")).toBeVisible();
+  const parent = page.getByRole("button", { name: /Parent mode/i });
+  await parent.dispatchEvent("pointerdown", { pointerType: "mouse" });
+  await expect(page.getByRole("heading", { name: "Parent notes" })).toBeVisible(
+    { timeout: 3000 },
+  );
+  await expect(
+    page.getByText("Hold width to receive instead of crowding the ball", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(page.getByText("cases above 96")).toBeVisible();
+  await expect(
+    page.getByText(/Check audit details: 0 failed cases · 0 failures/),
+  ).toBeVisible();
+  await expect(page.getByText("Goalkeeper Games")).toBeVisible();
+  await page.getByRole("button", { name: "Reset all story progress" }).click();
+  expect(
+    await page.evaluate(() =>
+      localStorage.getItem("nolan-animation-progress-v1"),
+    ),
+  ).toContain('"sceneResults":{}');
+});
 
-test('goalkeeper decisions and phone-sized choices are playable',async({page})=>{await page.setViewportSize({width:390,height:844});await openScene(page,'Goalkeeper Games','Set the Angle');await expect(page.locator('.scene-canvas')).toBeInViewport();await expect(page.locator('[data-actor-id="nolan"]')).toHaveAttribute('aria-label','Tom');await waitForChoice(page,'Set and narrow');await expect(page.getByRole('button',{name:'Set and narrow'})).toBeInViewport();await expect(page.getByRole('button',{name:'Stay on line'})).toBeInViewport()});
+test("goalkeeper decisions and phone-sized choices are playable", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openScene(page, "Goalkeeper Games", "Set the Angle");
+  await expect(page.locator(".scene-canvas")).toBeInViewport();
+  await expect(page.locator('[data-actor-id="nolan"]')).toHaveAttribute(
+    "aria-label",
+    "Tom",
+  );
+  const best = page.getByTestId("role-path-a").locator(".."),
+    poor = page.getByTestId("role-path-c").locator("..");
+  await expect(best).toBeVisible({ timeout: 6000 });
+  await expect(best).toBeInViewport();
+  await expect(poor).toBeInViewport();
+});
 
-test('player can save a custom name used on the field and in coaching',async({page})=>{await page.goto('/');const input=page.getByRole('textbox',{name:'Player name'});await expect(input).toHaveValue('Tom');await input.fill('Mia');await input.blur();await expect(page.getByRole('heading',{name:/Mia’s Soccer Game/i})).toBeVisible();await page.getByRole('button',{name:/Play soccer/i}).click();await page.getByRole('button',{name:/Winger Games/i}).click();await page.getByRole('button',{name:/Stay Wide/i}).click();await expect(page.locator('[data-actor-id="nolan"]')).toHaveAttribute('aria-label','Mia');await page.reload();await expect(page.getByRole('textbox',{name:'Player name'})).toHaveValue('Mia');await expect(page.getByRole('heading',{name:/Mia’s Soccer Game/i})).toBeVisible()});
+test("player can save a custom name used on the field and in coaching", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const input = page.getByRole("textbox", { name: "Player name" });
+  await expect(input).toHaveValue("Tom");
+  await input.fill("Mia");
+  await input.blur();
+  await expect(
+    page.getByRole("heading", { name: /Mia’s Soccer Game/i }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /Play soccer/i }).click();
+  await page.getByRole("button", { name: /Winger Games/i }).click();
+  await page.getByRole("button", { name: /Stay Wide/i }).click();
+  await expect(page.locator('[data-actor-id="nolan"]')).toHaveAttribute(
+    "aria-label",
+    "Mia",
+  );
+  await page.reload();
+  await expect(page.getByRole("textbox", { name: "Player name" })).toHaveValue(
+    "Mia",
+  );
+  await expect(
+    page.getByRole("heading", { name: /Mia’s Soccer Game/i }),
+  ).toBeVisible();
+});
 
-test('half-turn preview shows body rotation while blind receive stays closed',async({page})=>{await openScene(page,'Attacking Midfielder Games','Receive on the Half Turn');await waitForChoice(page,'Receive on the Half Turn');const open=page.getByRole('button',{name:'Receive on the Half Turn'}),closed=page.getByRole('button',{name:'Receive without scanning'});await expect(open.getByText('Watch Tom scan and open')).toBeVisible();await expect(closed.getByText('Watch Tom receive closed')).toBeVisible();await expect(open.locator('animateTransform')).toHaveCount(1);await expect(closed.locator('animateTransform')).toHaveCount(0);await expect(open.locator('.moving-ball')).toHaveCount(1);await expect(closed.locator('.moving-ball')).toHaveCount(1)});
+test("half-turn preview shows body rotation while blind receive stays closed", async ({
+  page,
+}) => {
+  await openScene(
+    page,
+    "Attacking Midfielder Games",
+    "Receive on the Half Turn",
+  );
+  const open = page.getByTestId("role-path-a").locator(".."),
+    closed = page.getByTestId("role-path-c").locator("..");
+  await expect(open).toBeVisible({ timeout: 6000 });
+  await expect(open.getByText("Watch Tom scan and open")).toBeVisible();
+  await expect(closed.getByText("Watch Tom receive closed")).toBeVisible();
+  await expect(open.locator("animateTransform")).toHaveCount(1);
+  await expect(closed.locator("animateTransform")).toHaveCount(0);
+  await expect(open.locator(".moving-ball")).toHaveCount(1);
+  await expect(closed.locator(".moving-ball")).toHaveCount(1);
+});
 
-test('Nolan can choose another option without replaying the setup',async({page})=>{await openScene(page,'Winger Games','Stay Wide');await waitForChoice(page,'Stay wide');await page.getByRole('button',{name:'Crowd the ball'}).click();await expect(page.getByText('See what happened?')).toBeVisible({timeout:6000});await page.getByRole('button',{name:/Choose again/i}).click();await expect(page.getByRole('button',{name:'Stay wide'})).toBeVisible({timeout:1000});await expect(page.getByRole('button',{name:'Crowd the ball'})).toBeVisible();await page.getByRole('button',{name:'Stay wide'}).click();await expect(page.getByText('Great choice!')).toBeVisible({timeout:6000})});
+test("Nolan can choose another option without replaying the setup", async ({
+  page,
+}) => {
+  await openScene(page, "Winger Games", "Stay Wide");
+  await waitForChoice(page, "Stay wide");
+  const before = await page
+    .locator('[data-testid^="role-path-"]')
+    .evaluateAll((items) =>
+      items.map((item) => item.getAttribute("data-testid")),
+    );
+  await page.getByRole("button", { name: "Crowd the ball" }).click();
+  await expect(page.getByText("See what happened?")).toBeVisible({
+    timeout: 6000,
+  });
+  await page.getByRole("button", { name: /Choose again/i }).click();
+  await expect(page.getByRole("button", { name: "Stay wide" })).toBeVisible({
+    timeout: 1000,
+  });
+  const after = await page
+    .locator('[data-testid^="role-path-"]')
+    .evaluateAll((items) =>
+      items.map((item) => item.getAttribute("data-testid")),
+    );
+  expect(after).not.toEqual(before);
+  await expect(
+    page.getByRole("button", { name: "Crowd the ball" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Stay wide" }).click();
+  await expect(page.getByText("Great choice!")).toBeVisible({ timeout: 6000 });
+});
 
-test('score saves the first decision and cannot be farmed with Choose again',async({page})=>{await openScene(page,'Winger Games','Stay Wide');await expect(page.getByLabel('0 total points')).toBeVisible();await waitForChoice(page,'Stay wide');await page.getByRole('button',{name:'Crowd the ball'}).click();await expect(page.getByText('⭐ +1 point')).toBeVisible({timeout:6000});await expect(page.getByLabel('1 total points')).toBeVisible();await page.getByRole('button',{name:/Choose again/i}).click();await page.getByRole('button',{name:'Stay wide'}).click();await expect(page.getByText('Great choice!')).toBeVisible({timeout:6000});await expect(page.getByText(/points/).filter({hasText:'+'})).toHaveCount(0);await expect(page.getByLabel('1 total points')).toBeVisible();await page.getByRole('button',{name:'Go home'}).click();await expect(page.getByLabel('1 points')).toBeVisible();await page.reload();await expect(page.getByLabel('1 points')).toBeVisible()});
+test("a missed story appears in the Practice Again pack", async ({ page }) => {
+  await openScene(page, "Winger Games", "Stay Wide");
+  await waitForChoice(page, "Stay wide");
+  await page.getByRole("button", { name: "Crowd the ball" }).click();
+  await expect(page.getByText(/No point yet/i)).toBeVisible({ timeout: 6000 });
+  await page.getByRole("button", { name: "Go home" }).click();
+  await page.getByRole("button", { name: /Play soccer/i }).click();
+  await expect(
+    page.getByRole("button", { name: /Practice Again/i }),
+  ).toContainText("1 story");
+  await page.getByRole("button", { name: /Practice Again/i }).click();
+  await expect(page.getByRole("button", { name: /Stay Wide/i })).toContainText(
+    "Practice this skill again",
+  );
+});
 
-test('Next story safely changes from an attacking layout to a defensive layout',async({page})=>{const errors:string[]=[];page.on('pageerror',(error)=>errors.push(error.message));await openScene(page,'Winger Games','Short or Behind');await waitForChoice(page,'Read defender');await page.getByRole('button',{name:'Read defender'}).click();await expect(page.getByText('Great choice!')).toBeVisible({timeout:6000});await page.getByRole('button',{name:/Next story/i}).click();await expect(page.getByText('Track the Overlap')).toBeVisible();await expect(page.getByText('Watch the game…')).toBeVisible();await expect(page.locator('.cartoon-player')).toHaveCount(14);await expect(page.getByLabel(/Active area: wide recovery/i)).toBeVisible();expect(errors).toEqual([])});
+test("a miss earns zero and a corrected re-choice earns one comeback point", async ({
+  page,
+}) => {
+  await openScene(page, "Winger Games", "Stay Wide");
+  await expect(page.getByLabel("0 total points")).toBeVisible();
+  await waitForChoice(page, "Stay wide");
+  await expect(page.locator(".visible-cue")).toContainText("Look:");
+  await page.getByRole("button", { name: "Crowd the ball" }).click();
+  await expect(page.getByText(/No point yet/i)).toBeVisible({ timeout: 6000 });
+  await expect(page.getByLabel("0 total points")).toBeVisible();
+  await page.getByRole("button", { name: /Choose again/i }).click();
+  await page.getByRole("button", { name: "Stay wide" }).click();
+  await expect(page.getByText("Great choice!")).toBeVisible({ timeout: 6000 });
+  await expect(page.getByText("⭐ +1 point")).toBeVisible();
+  await expect(page.getByLabel("1 total points")).toBeVisible();
+  await page.getByRole("button", { name: "Go home" }).click();
+  await expect(page.getByLabel("1 points")).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel("1 points")).toBeVisible();
+});
 
-test('new real-match role packs contain 30 playable scenarios',async({page})=>{await page.goto('/');await page.getByRole('button',{name:/Play soccer/i}).click();for(const packName of ['Attacking Midfielder Games','Defensive Midfielder Games']){const card=page.getByRole('button',{name:new RegExp(packName,'i')});await expect(card).toContainText('0/30 stories');await card.click();await expect(page.locator('.scene-row')).toHaveCount(30);await page.getByRole('button',{name:'Back to packs'}).click()}await page.getByRole('button',{name:/Goalkeeper Games/i}).click();await expect(page.locator('.scene-row')).toHaveCount(30);await page.getByRole('button',{name:/Manage the Final Aerial Ball/i}).click();await waitForChoice(page,'Manage the Final Aerial Ball');await expect(page.getByTestId('game-ball')).toBeVisible()});
+test("Stage 2 uses predictions and Next story safely changes to a defensive layout", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await openScene(page, "Winger Games", "Short or Behind");
+  await expect(page.getByRole("button", { name: "Read defender" })).toHaveCount(
+    0,
+  );
+  await expect(
+    page
+      .getByRole("button", {
+        name: /Blue keeps the move going|Blue finds open space/i,
+      })
+      .first(),
+  ).toBeVisible({ timeout: 6000 });
+  await page.getByTestId("role-path-a").locator("..").click();
+  await expect(page.getByText("Great choice!")).toBeVisible({ timeout: 6000 });
+  await page.getByRole("button", { name: /Next story/i }).click();
+  await expect(page.getByText("Track the Overlap")).toBeVisible();
+  await expect(page.getByText("Watch the game…")).toBeVisible();
+  await expect(page.locator(".cartoon-player")).toHaveCount(14);
+  await expect(page.getByLabel(/Active area: wide recovery/i)).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("new real-match role packs contain 30 playable scenarios", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /Play soccer/i }).click();
+  for (const packName of [
+    "Attacking Midfielder Games",
+    "Defensive Midfielder Games",
+  ]) {
+    const card = page.getByRole("button", { name: new RegExp(packName, "i") });
+    await expect(card).toContainText("0/30 stories");
+    await card.click();
+    await expect(page.locator(".scene-row")).toHaveCount(30);
+    await page.getByRole("button", { name: "Back to packs" }).click();
+  }
+  await page.getByRole("button", { name: /Goalkeeper Games/i }).click();
+  await expect(page.locator(".scene-row")).toHaveCount(30);
+  await page
+    .getByRole("button", { name: /Manage the Final Aerial Ball/i })
+    .click();
+  await expect(page.getByTestId("role-path-a")).toBeVisible({ timeout: 6000 });
+  await expect(page.getByTestId("game-ball")).toBeVisible();
+});
