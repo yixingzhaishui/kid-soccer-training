@@ -7,7 +7,10 @@ import type {
 import { finalFrame } from "./timeline";
 
 export type TacticalFailure = {
-  code: "SHOT_AT_WRONG_GOAL";
+  code:
+    | "SHOT_AT_WRONG_GOAL"
+    | "BALL_SENT_INTO_OWN_GOAL"
+    | "DELAY_COUNTER_BLUE_KICK";
   message: string;
 };
 
@@ -85,6 +88,14 @@ export function repairTacticalTrajectory(
             .sort((a, b) => b.clearance - a.clearance)[0].candidate;
           item.to = { x, y };
         }
+        // A poor option may lose the ball, but it must lose it to an opponent
+        // on the field — never animate an accidental pass into its own net.
+        if (item.action !== "shoot") {
+          if (actor.team === "blue" && item.to.x <= 5)
+            item.to = { ...item.to, x: 9 };
+          if (actor.team === "red" && item.to.x >= 95)
+            item.to = { ...item.to, x: 91 };
+        }
       }
       if (
         actor &&
@@ -116,6 +127,15 @@ function resultFailures(scene: AnimatedScenario, result: ChoiceResult) {
             message: `${result.choiceId}: ${actor.id} shoots toward x=${Math.round(item.to.x)} instead of the opponent goal`,
           });
       }
+      if (
+        item.action !== "shoot" &&
+        ((actor.team === "blue" && item.to.x <= 5) ||
+          (actor.team === "red" && item.to.x >= 95))
+      )
+        failures.push({
+          code: "BALL_SENT_INTO_OWN_GOAL",
+          message: `${result.choiceId}: ${actor.id} ${item.action}s into its own goal end`,
+        });
     }
   }
   return failures;
@@ -128,16 +148,29 @@ function resultFailures(scene: AnimatedScenario, result: ChoiceResult) {
  * separate spatial match audit, including on a phone viewport.
  */
 export function tacticalFailures(scene: AnimatedScenario): TacticalFailure[] {
-  return resultFailures(scene, scene.results[0])
-    .concat(
-      ...scene.results.slice(1).map((result) => resultFailures(scene, result)),
+  const failures = resultFailures(scene, scene.results[0]).concat(
+    ...scene.results.slice(1).map((result) => resultFailures(scene, result)),
+  );
+  const best = scene.results.find((result) => result.quality === "best");
+  if (
+    scene.category === "defensive-midfielder" &&
+    /delay|slow/i.test(scene.formalConcept) &&
+    best?.animationSteps.some(
+      (step) =>
+        Boolean(step.actorId?.startsWith("blue")) &&
+        ballActions.has(step.action),
     )
-    .filter(
-      (failure, index, all) =>
-        all.findIndex(
-          (other) =>
-            `${other.code}:${other.message}` ===
-            `${failure.code}:${failure.message}`,
-        ) === index,
-    );
+  )
+    failures.push({
+      code: "DELAY_COUNTER_BLUE_KICK",
+      message: `${best.choiceId}: a delay-counter outcome gives Blue a ball kick instead of recovery shape`,
+    });
+  return failures.filter(
+    (failure, index, all) =>
+      all.findIndex(
+        (other) =>
+          `${other.code}:${other.message}` ===
+          `${failure.code}:${failure.message}`,
+      ) === index,
+  );
 }

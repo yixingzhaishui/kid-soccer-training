@@ -1521,12 +1521,28 @@ function contrastSteps(
     const gx = reference.previewBall.to.x - reference.previewBall.from.x,
       gy = reference.previewBall.to.y - reference.previewBall.from.y,
       length = Math.max(1, Math.hypot(gx, gy));
-    const ux = quarterTurn ? -gy / length : -gx / length,
-      uy = quarterTurn ? gx / length : -gy / length;
+    // A goalkeeper's alternative distribution must turn into the field,
+    // rather than rotate toward the touchline beside their own goal.
+    const rotateIntoField = quarterTurn && kick.from.x < 20,
+      ux = quarterTurn
+        ? rotateIntoField
+          ? gy / length
+          : -gy / length
+        : -gx / length,
+      uy = quarterTurn
+        ? rotateIntoField
+          ? -gx / length
+          : gx / length
+        : -gy / length;
     const destination = readableDestination(
         kick.from,
-        clampPoint(p(kick.from.x + ux * 25, kick.from.y + uy * 25)),
-        22,
+        clampPoint(
+          p(
+            kick.from.x + ux * (rotateIntoField ? 40 : 25),
+            kick.from.y + uy * (rotateIntoField ? 40 : 25),
+          ),
+        ),
+        rotateIntoField ? 35 : 22,
       ),
       old = kick.to,
       kickIndex = steps.indexOf(kick);
