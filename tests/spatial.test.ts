@@ -27,4 +27,13 @@ describe('readable player geometry',()=>{
     expect(away.to!.x).toBeGreaterThan(tom.x);
     expect(Math.hypot(drop.to!.x-away.to!.x,drop.to!.y-away.to!.y)).toBeGreaterThanOrEqual(8);
   });
+
+  it('shows Tom reaching the end line before the WNG-04 cutback',()=>{
+    const scene=sceneById('WNG-04')!,tom=scene.actors.find((actor)=>actor.id==='nolan')!.start;
+    const cutback=scene.choices.find((choice)=>choice.label==='Cut it back')!,blind=scene.choices.find((choice)=>choice.label==='Cross blindly')!;
+    const cutMove=cutback.previewAnimation.find((step)=>step.actorId==='nolan')!,blindMove=blind.previewAnimation.find((step)=>step.actorId==='nolan')!;
+    expect(cutMove.to!.x-tom.x).toBeGreaterThanOrEqual(12);
+    expect(Math.hypot(cutMove.to!.x-blindMove.to!.x,cutMove.to!.y-blindMove.to!.y)).toBeGreaterThanOrEqual(8);
+    expect(cutback.previewBall!.to.y).not.toBe(blind.previewBall!.to.y);
+  });
 });

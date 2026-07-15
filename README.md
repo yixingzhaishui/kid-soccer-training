@@ -85,6 +85,6 @@ npm run preview
 
 ## Completion status
 
-Implemented: 30 playable scenarios for each of the eight positional roles, plus 10 teamwork stories; 61 mapped child skills; animated active opponents; option-centered design scoring with a visible score for every individual option; receiver, body-occlusion, trajectory, and goal-direction validation; scoring, saved progress, Parent Mode, speech, replay, re-choose, and side-by-side comparison. The automated suite currently contains 32 curriculum/unit tests and 33 browser tests across desktop Chromium, phone-sized Chromium, and phone-sized WebKit.
+Implemented: 30 playable scenarios for each of the eight positional roles, plus 10 teamwork stories; 61 mapped child skills; animated active opponents; option-centered design scoring with a visible score for every individual option; receiver, body-occlusion, trajectory, option-preview/consequence agreement, and goal-direction validation; scoring, saved progress, Parent Mode, speech, replay, re-choose, and side-by-side comparison. The automated suite currently contains 33 curriculum/unit tests and 33 browser tests across desktop Chromium, phone-sized Chromium, and phone-sized WebKit.
 
 Remaining: the 250-story curriculum is data-driven and passes the automated football-consistency gates, but it has not been independently certified by a licensed youth coach. That human coaching review is the only outstanding curriculum-validation step; it is not represented as complete here.

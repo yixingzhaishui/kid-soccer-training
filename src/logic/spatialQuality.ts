@@ -1,8 +1,9 @@
 import type {AnimatedActor,AnimatedChoice,AnimatedScenario,AnimationStep,Point} from '../types/soccer';
 import {applyAnimationStep,finalFrame,type SceneFrame} from './timeline';
 import {blockedBestChoicePaths} from './trajectory';
+import {optionIntent} from './optionSemantics';
 
-export type HardFailure={code:'PLAYER_OCCLUSION'|'RECEIVER_BLOCKED'|'OPTIONS_LOOK_SAME'|'BALL_PATH_BLOCKED';message:string};
+export type HardFailure={code:'PLAYER_OCCLUSION'|'RECEIVER_BLOCKED'|'OPTIONS_LOOK_SAME'|'OPTION_PREVIEW_MISMATCH'|'BALL_PATH_BLOCKED';message:string};
 
 const distance=(a:Point,b:Point)=>Math.hypot(a.x-b.x,a.y-b.y);
 const isSupport=(actor:AnimatedActor)=>actor.id.startsWith('support-');
@@ -64,6 +65,7 @@ function blockedReceivers(scene:AnimatedScenario,setup:SceneFrame,result:Animate
 export function hardFailures(scene:AnimatedScenario):HardFailure[]{
   const setup=finalFrame(scene.actors,scene.ballStart,scene.setupAnimation),failures=frameOcclusions(scene,setup,'decision pause');
   for(let i=0;i<scene.choices.length;i++)for(let j=i+1;j<scene.choices.length;j++)if(choicesLookSame(scene.choices[i],scene.choices[j]))failures.push({code:'OPTIONS_LOOK_SAME',message:`${scene.choices[i].label} and ${scene.choices[j].label} show the same route`});
+  for(const choice of scene.choices){const intent=optionIntent(choice.label);if(['hold','active-hold','closed-receive','orient','ball-hold'].includes(intent))continue;const result=scene.results.find((item)=>item.choiceId===choice.id),consequenceMove=result?.animationSteps.find((step)=>step.actorId==='nolan'&&step.from&&step.to&&['run','walk','dribble','defend','press','shield'].includes(step.action)&&distance(step.from,step.to)>=4),preview=movement(choice);if(consequenceMove&&(!preview?.to||distance(preview.to,consequenceMove.to!)>6))failures.push({code:'OPTION_PREVIEW_MISMATCH',message:`${choice.id}: ${choice.label} preview does not show Tom's consequence route`})}
   for(const result of scene.results){
     const resultFrame=[...result.animationSteps].sort((a,b)=>a.startTime-b.startTime).reduce(applyAnimationStep,setup);
     failures.push(...frameOcclusions(scene,resultFrame,`${result.choiceId} freeze frame`));
