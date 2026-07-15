@@ -1,6 +1,6 @@
 # Nolan Soccer Trainer — Role Scenario Inventory
 
-Status: **duplicate review passed; approved for animation implementation**
+Status: **core inventory plus 30-per-role expansion reviewed and implemented; 250 playable stories**
 
 This inventory is the implementation gate for the 50-scene first release in `NOLAN_SOCCER_TRAINER_ROLE_SPEC.md`. A scene may be implemented only from one row below. “Blue goal” and “red goal” are explicit animation assets; shots must terminate at the opponent’s labeled goal.
 
@@ -89,6 +89,36 @@ This inventory is the implementation gate for the 50-scene first release in `NOL
 | TW-09 | Teamwork | Blue wins a loose ball and launches a 3v2 counter with defenders narrow | Fill left, center, and right lanes | Width splits defenders and creates a central shot | Three attackers bunch centrally; one defender delays all three until recovery | Halfway to attacking box | Possession win, three-lane sprint, defender split, shot, central bunch/delay |
 | TW-10 | Teamwork | Blue leads late and receives near the opponent corner with support behind | Shield in the corner or recycle safely instead of crossing | Blue protects possession while the clock runs | Blind cross reaches the goalkeeper, who immediately starts a counter | Attacking corner | Match clock, corner shield, safe recycle, blind cross, goalkeeper catch/counter throw |
 
+## Attacking midfielder expansion — 6 scenes
+
+| Scenario ID | Role | Unique game trigger | Main decision | Good consequence | Poor consequence | Field location | Animation assets required |
+|---|---|---|---|---|---|---|---|
+| AM-01 | Attacking midfielder | Center back carries forward while opposing midfielders step toward the ball | Drift into the pocket between midfield and defense | Nolan receives between lines and turns toward the back four | Nolan stands beside the striker and one defender marks both | Central pocket behind midfield | Pocket movement, vertical pass, half-turn, compact marking |
+| AM-02 | Attacking midfielder | Nolan receives between lines with pressure arriving from one shoulder | Scan and turn through the free shoulder or bounce the ball back | Nolan faces goal and draws a center defender out | Blind turn is trapped and the attack loses its central connector | Top of central attacking third | Shoulder scan, half-turn, bounce pass, rear pressure trap |
+| AM-03 | Attacking midfielder | Striker curves behind the line as the nearest center defender steps out | Release the through pass into the striker’s path | Pass splits the line and sends the striker through on goal | Delayed pass arrives after the line drops and the striker is covered | Central channel outside box | Curved striker run, through pass, line drop, one-on-one finish |
+| AM-04 | Attacking midfielder | Fullback blocks Nolan near the corner of the box while a teammate checks close | Play a one-two and continue around the defender | One-touch return releases Nolan inside the box | Nolan stops after passing and the return ball rolls into empty space | Edge of box, half-space | Give-and-go, continued run, one-touch return, empty return lane |
+| AM-05 | Attacking midfielder | Nolan collects a clearance at the box edge with a shot lane and safe support behind | Shoot when the lane stays open or recycle when it closes | Either controlled choice keeps the attack dangerous | Forced shot into a closing defender rebounds into an opponent counter | Top of penalty arc | Clearance, shot-lane close, edge shot, recycle pass, counter rebound |
+| AM-06 | Attacking midfielder | Nolan’s final pass is intercepted just outside the opponent box | Counterpress the receiver immediately while blocking the outlet | Blue wins the second ball and sustains the attack | Nolan complains and jogs back; opponent escapes into midfield | Attacking transition zone | Interception, immediate press, outlet block, second-ball win, escape dribble |
+
+## Defensive midfielder expansion — 6 scenes
+
+| Scenario ID | Role | Unique game trigger | Main decision | Good consequence | Poor consequence | Field location | Animation assets required |
+|---|---|---|---|---|---|---|---|
+| DM-01 | Defensive midfielder | Opponent number ten checks toward the ball between blue’s lines | Screen the pass into the striker before pressing the carrier | Central pass is blocked and forced harmlessly wide | Nolan chases the ball; a pass enters the unprotected striker’s feet | Space in front of center backs | Screening movement, lane block, forced-wide pass, central receive |
+| DM-02 | Defensive midfielder | Center back passes into Nolan as two forwards close from different angles | Open the body toward the safe side or return first-time | Nolan escapes the first press and starts build-up | Closed body shape sends the first touch toward the nearest forward | Defensive center circle | Body opening, two-sided press, safe turn, first-time return, bad touch |
+| DM-03 | Defensive midfielder | Blue winger presses outside and the fullback follows, leaving the inside lane exposed | Slide laterally to cover the inside channel | Nolan intercepts the inside pass and balances the press | Nolan stays central; opponent underlaps into the empty channel | Defensive half-space | Wide press, lateral cover, underlap, interception, balance recovery |
+| DM-04 | Defensive midfielder | Opponent midfielder releases the ball then runs beyond blue’s midfield | Track the runner instead of following the ball | Nolan arrives with the runner and clears the cutback | Nolan ball-watches; late runner receives alone at the penalty spot | Central defensive transition | Give-and-go runner, tracking sprint, cutback, clearance, late finish |
+| DM-05 | Defensive midfielder | Nolan receives facing forward after blue draws the press to one side | Break the first line with a vertical pass | Forward receives between opponents and blue attacks the back line | Safe-looking sideways pass lets the opponent press reset around blue | Middle third, central pivot lane | Press attraction, vertical split pass, between-lines receive, reset press |
+| DM-06 | Defensive midfielder | Opponents break centrally after a blue corner with teammates recovering | Delay the counter without diving into a tackle | Nolan slows the carrier until two blue defenders recover | Reckless tackle is skipped and creates a three-against-two | Center circle defensive transition | Counter launch, jockey/delay, recovery runs, tackle miss, 3v2 |
+
+## Goalkeeper match expansion — 3 scenes
+
+| Scenario ID | Role | Unique game trigger | Main decision | Good consequence | Poor consequence | Field location | Animation assets required |
+|---|---|---|---|---|---|---|---|
+| GK-05 | Goalkeeper | Opponent corner setup leaves an attacker unmarked at the back post | Point and organize a defender before the kick | Defender marks the runner and heads the corner clear | Nolan stays silent; unmarked attacker heads at goal | Goal area during corner | Goalkeeper pointing, defender assignment, corner arc, marked/unmarked header |
+| GK-06 | Goalkeeper | High cross enters the six-yard area with no attacker able to reach it first | Come and catch rather than staying on the line | Nolan claims above traffic and ends the attack | Nolan stays; cross drops into a crowded rebound near goal | Six-yard cross corridor | Cross arc, goalkeeper call/charge/jump/catch, traffic, loose drop |
+| GK-07 | Goalkeeper | Nolan parries a close shot while the ball remains live near the post | Recover feet and set for the second shot | Nolan makes a second save and gathers the ball | Nolan watches the first save; rebound is scored into the open side | Goal mouth rebound zone | First dive/parry, goalkeeper recovery, second set/dive, gather, rebound finish |
+
 ## Duplicate-concept review
 
 Review method: each row was compared on a signature of **trigger + decision + field location + visible failure**. Similar soccer vocabulary is allowed only when the player responsibility, geometry, and consequence differ materially.
@@ -109,6 +139,14 @@ Review method: each row was compared on a signature of **trigger + decision + fi
 | STR-06 vs GK-03 | Striker attacks an opponent spill; goalkeeper controls where a hard shot is parried. They are complementary viewpoints, not cloned scenes. | Keep both |
 | WNG-08 vs TW-09 | Winger personally chooses the empty flank on a counter; teamwork coordinates three distinct counterattack lanes. | Keep both |
 | CM-06 vs TW-10 | Midfielder slows tempo centrally so team shape reforms; teamwork protects a late lead at the opponent corner. | Keep both |
+| AM-01 vs STR-02 | Attacking midfielder finds an unoccupied pocket to receive facing forward; striker checks toward pressure to provide a back-to-goal link. | Keep both |
+| AM-03 vs STR-03 | Attacking midfielder selects and times the through pass; striker selects and times the run. Opposite responsibilities and camera focus. | Keep both |
+| AM-04 vs TW-03 | Attacking midfielder solves a box-edge defender as the ball carrier; teamwork teaches both players’ wall-pass coordination farther from goal. | Keep both |
+| AM-06 vs STR-07 | Attacking midfielder counterpresses immediately after their own turnover; striker begins an organized curved press against settled build-up. | Keep both |
+| DM-01 vs TW-08 | Defensive midfielder screens one central lane; teamwork assigns pressure, cover, and balance across three defenders. | Keep both |
+| DM-03 vs CM-07 | Defensive midfielder slides inside during an active wide press; central midfielder covers the space behind an attacking overlap before turnover. | Keep both |
+| DM-06 vs TW-07 | Defensive midfielder delays a central post-corner counter; teamwork defender protects a square-pass lane in a wide 2v1. | Keep both |
+| GK-03 vs GK-07 | GK-03 controls the direction of the first parry; GK-07 teaches recovery movement and a second set after a completed parry. | Keep both |
 
 Rejected during review:
 
@@ -119,10 +157,11 @@ Rejected during review:
 
 ## Implementation gate
 
-- [x] Exactly 50 first-release scenarios inventoried: 8 winger, 8 striker, 8 central midfielder, 6 fullback, 6 center defender, 4 goalkeeper, 10 teamwork.
+- [x] Original 50-scene release preserved: 8 winger, 8 striker, 8 central midfielder, 6 fullback, 6 center defender, 4 goalkeeper, 10 teamwork.
+- [x] Expanded real-match curriculum reaches 30 scenarios for each of eight positional roles: 240 role scenarios.
+- [x] Teamwork remains a separate 10-scenario shared pack, for 250 playable stories total.
 - [x] Every scenario has a unique trigger.
 - [x] Every scenario has a distinct decision/layout/consequence signature.
 - [x] Every role uses role-specific responsibilities.
 - [x] Shot direction is defined relative to the labeled opponent goal.
 - [x] Duplicate review completed before animation implementation.
-
