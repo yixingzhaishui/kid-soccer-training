@@ -670,7 +670,56 @@ function skillIdFor(row: InventoryRow) {
   const text = `${row.decision} ${row.trigger}`.toLowerCase(),
     id = row.id,
     defensive = defensiveIds.has(id) || row.assets.startsWith("defensive");
-  const coreGoalkeeperSkills: Record<string, string> = {
+  const coreSkillIds: Record<string, string> = {
+    "WNG-01": "A08",
+    "WNG-02": "A12",
+    "WNG-03": "A19",
+    "WNG-04": "A20",
+    "WNG-05": "A21",
+    "WNG-06": "A02",
+    "WNG-07": "D06",
+    "WNG-08": "T01",
+    "STR-01": "A22",
+    "STR-02": "A02",
+    "STR-03": "A09",
+    "STR-04": "A10",
+    "STR-05": "A23",
+    "STR-06": "A24",
+    "STR-07": "D02",
+    "STR-08": "A09",
+    "CM-01": "A01",
+    "CM-02": "A03",
+    "CM-03": "A15",
+    "CM-04": "A07",
+    "CM-05": "A14",
+    "CM-06": "A16",
+    "CM-07": "D03",
+    "CM-08": "A22",
+    "AM-01": "A02",
+    "AM-02": "A03",
+    "AM-03": "A26",
+    "AM-04": "A13",
+    "AM-05": "A23",
+    "AM-06": "T03",
+    "AM-07": "A03",
+    "DM-01": "D05",
+    "DM-02": "A03",
+    "DM-03": "D03",
+    "DM-04": "D06",
+    "DM-05": "A26",
+    "DM-06": "D11",
+    "FB-01": "D08",
+    "FB-02": "D09",
+    "FB-03": "A17",
+    "FB-04": "A18",
+    "FB-05": "T04",
+    "FB-06": "T02",
+    "CB-01": "D07",
+    "CB-02": "D13",
+    "CB-03": "D03",
+    "CB-04": "D19",
+    "CB-05": "D16",
+    "CB-06": "D12",
     "GK-01": "G01",
     "GK-02": "G05",
     "GK-03": "G03",
@@ -678,8 +727,107 @@ function skillIdFor(row: InventoryRow) {
     "GK-05": "G10",
     "GK-06": "G07",
     "GK-07": "G11",
+    "TW-01": "A05",
+    "TW-02": "A06",
+    "TW-03": "A13",
+    "TW-04": "A14",
+    "TW-05": "A15",
+    "TW-06": "A11",
+    "TW-07": "D11",
+    "TW-08": "D04",
+    "TW-09": "T01",
+    "TW-10": "T05",
   };
-  if (coreGoalkeeperSkills[id]) return coreGoalkeeperSkills[id];
+  if (coreSkillIds[id]) return coreSkillIds[id];
+  const reviewedExtendedSkillIds: Record<string, string> = {
+    "WNG-09": "A04",
+    "WNG-10": "A03",
+    "WNG-11": "A10",
+    "WNG-12": "A05",
+    "WNG-13": "A13",
+    "WNG-18": "A05",
+    "WNG-19": "A15",
+    "WNG-22": "D16",
+    "WNG-30": "A06",
+    "STR-09": "A09",
+    "STR-10": "A27",
+    "STR-12": "A05",
+    "STR-15": "A23",
+    "STR-18": "A22",
+    "STR-21": "A13",
+    "STR-24": "D01",
+    "STR-26": "D15",
+    "STR-29": "A22",
+    "CM-12": "A13",
+    "CM-13": "A15",
+    "CM-14": "A07",
+    "CM-18": "A26",
+    "CM-20": "A25",
+    "CM-21": "T04",
+    "CM-22": "D06",
+    "CM-23": "D03",
+    "CM-30": "A22",
+    "AM-11": "A26",
+    "AM-20": "A23",
+    "AM-25": "D05",
+    "AM-28": "A10",
+    "AM-30": "A05",
+    "DM-09": "A04",
+    "DM-10": "A15",
+    "DM-14": "D03",
+    "DM-16": "D10",
+    "DM-20": "D03",
+    "DM-23": "D11",
+    "DM-25": "D12",
+    "DM-28": "A26",
+    "DM-29": "A07",
+    "DM-30": "A06",
+    "FB-07": "A03",
+    "FB-08": "A04",
+    "FB-09": "A13",
+    "FB-10": "A15",
+    "FB-13": "A06",
+    "FB-15": "A05",
+    "FB-17": "D11",
+    "FB-21": "D17",
+    "FB-22": "D03",
+    "FB-24": "D12",
+    "FB-27": "T05",
+    "FB-30": "A07",
+    "CB-09": "A26",
+    "CB-10": "A15",
+    "CB-12": "A07",
+    "CB-16": "D06",
+    "CB-18": "D15",
+    "CB-22": "D03",
+    "CB-23": "D03",
+    "CB-24": "D03",
+    "CB-26": "D19",
+    "GK-08": "G01",
+    "GK-09": "G01",
+    "GK-10": "G02",
+    "GK-11": "G03",
+    "GK-12": "G04",
+    "GK-13": "G06",
+    "GK-14": "G05",
+    "GK-15": "G09",
+    "GK-16": "G09",
+    "GK-17": "G09",
+    "GK-18": "G09",
+    "GK-19": "G09",
+    "GK-20": "G09",
+    "GK-21": "G10",
+    "GK-22": "G10",
+    "GK-23": "G10",
+    "GK-24": "G07",
+    "GK-25": "G08",
+    "GK-26": "G12",
+    "GK-27": "G07",
+    "GK-28": "G13",
+    "GK-29": "G09",
+    "GK-30": "G07",
+  };
+  if (reviewedExtendedSkillIds[id]) return reviewedExtendedSkillIds[id];
   if (!id.startsWith("GK-") && !defensive) return attackingSkillId(row, text);
   if (id === "CB-13") return "D13";
   if (id === "CB-27") return "D12";
@@ -1921,7 +2069,7 @@ function layout(row: InventoryRow, index: number) {
     label: areaLabel,
   };
   if (goalkeeper) {
-    const nolan = p(8, 32),
+    const nolan = row.id === "GK-28" ? p(28, 32) : p(8, 32),
       redBall = p(38 + jitter, y),
       red2 = p(28 + jitter, 48 - y / 3),
       target = p(25, 14 + (index % 2) * 35),
@@ -3057,6 +3205,14 @@ function poorAnimation(
 ): AnimationStep[] {
   const { nolan, carrier, badTo, target } = l;
   const text = row.poor.toLowerCase();
+  if (row.id === "GK-28")
+    return [
+      step(0, 1200, "dribble", "redBall", carrier, p(24, 18)),
+      step(250, 1200, "dive", "nolan", nolan, p(36, 16)),
+      step(1350, 750, "pass", "redBall", p(24, 18), p(20, 44)),
+      step(1950, 700, "shoot", "red2", p(20, 44), p(3, 38)),
+      step(2700, 500, "react", "nolan", undefined, undefined, "worried"),
+    ];
   if (!reviewedCoreIds.has(row.id)) return dutyPoorAnimation(row, index, l);
   if (row.id === "GK-01" || row.id === "GK-02")
     return [
@@ -3401,6 +3557,723 @@ function prepareClearBestPaths(
   return [...steps, ...openings];
 }
 
+const coachRepairIds = new Set(
+  `WNG-02 WNG-05 WNG-06 WNG-07 WNG-08 STR-02 STR-04 STR-08 FB-02 FB-03 FB-04 FB-05 FB-06 CB-02 CB-04 CB-05 CB-06 TW-06 TW-09 DM-04 DM-05 WNG-09 WNG-10 WNG-11 WNG-12 WNG-13 WNG-14 WNG-15 WNG-18 WNG-22 WNG-23 WNG-26 WNG-28 WNG-29 WNG-30 STR-09 STR-10 STR-11 STR-12 STR-13 STR-14 STR-15 STR-17 STR-21 STR-24 STR-26 STR-28 STR-29 STR-30 CM-07 CM-09 CM-11 CM-12 CM-18 CM-19 CM-20 CM-21 CM-23 CM-24 CM-25 CM-29 CM-30 AM-07 AM-08 AM-12 AM-14 AM-17 AM-18 AM-21 AM-24 AM-26 AM-27 AM-28 DM-03 DM-09 DM-11 DM-14 DM-16 DM-17 DM-18 DM-19 DM-20 DM-21 DM-24 DM-25 DM-28 DM-29 DM-30 FB-07 FB-08 FB-09 FB-11 FB-13 FB-19 FB-20 FB-21 FB-22 FB-24 FB-25 FB-26 FB-29 FB-30 CB-01 CB-03 CB-09 CB-11 CB-12 CB-13 CB-15 CB-18 CB-19 CB-20 CB-22 CB-23 CB-24 CB-26 CB-27 CB-28 GK-01 GK-08 GK-09 GK-13 GK-17 GK-25 GK-26 GK-28 GK-30 TW-08`.split(
+    " ",
+  ),
+);
+
+function coachProofAnimation(
+  row: InventoryRow,
+  index: number,
+  l: ReturnType<typeof layout>,
+  quality: "good" | "poor",
+  label: string,
+  raw: AnimationStep[],
+): AnimationStep[] {
+  if (
+    quality !== "good" ||
+    label !== metadata[row.id]?.goodLabel ||
+    !coachRepairIds.has(row.id)
+  )
+    return raw;
+  const skill = skillIdFor(row),
+    { nolan, carrier, target } = l,
+    safeY = (value: number) => Math.max(10, Math.min(54, value)),
+    side = index % 2 ? 1 : -1,
+    redGoal = p(97, 32);
+
+  if (["A01", "A03"].includes(skill))
+    return [
+      step(0, 500, "scan", "nolan", nolan, nolan),
+      step(450, 550, "turn", "nolan", nolan, p(nolan.x + 2, nolan.y)),
+      ...raw.map((item) => ({ ...item, startTime: item.startTime + 950 })),
+    ];
+
+  if (skill === "A04") {
+    const red1Start = l.actors.find((item) => item.id === "red1")!.start,
+      awayFromPressure = red1Start.y <= nolan.y ? 1 : -1,
+      pressure =
+        row.id === "FB-08"
+          ? p(nolan.x + 6, safeY(nolan.y + 15))
+          : p(nolan.x + 4, safeY(nolan.y - awayFromPressure * 5)),
+      touch =
+        row.id === "FB-08"
+          ? p(Math.min(86, nolan.x + 18), 10)
+          : p(
+              Math.min(86, nolan.x + 5),
+              safeY(nolan.y + awayFromPressure * 12),
+            );
+    return [
+      step(0, 750, "pass", "blue1", carrier, nolan),
+      step(650, 400, "receive", "nolan", nolan, nolan),
+      step(450, 1100, "defend", "red1", undefined, pressure),
+      step(1000, 900, "dribble", "nolan", nolan, touch),
+      step(1850, 800, "pass", "nolan", touch, target),
+      step(2600, 450, "receive", "blue2", target, target),
+    ];
+  }
+
+  if (skill === "A05" && ["WNG-12", "WNG-18"].includes(row.id)) {
+    const outside = p(Math.min(84, nolan.x + 16), nolan.y < 32 ? 10 : 54),
+      inside = p(Math.min(82, nolan.x + 14), nolan.y < 32 ? 30 : 34);
+    if (row.id === "WNG-12")
+      return [
+        step(0, 700, "pass", "blue1", carrier, nolan),
+        step(650, 400, "receive", "nolan", nolan, nolan),
+        step(500, 1500, "run", "blue2", target, outside),
+        step(
+          650,
+          1350,
+          "defend",
+          "red1",
+          undefined,
+          p(outside.x - 5, outside.y),
+        ),
+        step(1000, 1300, "dribble", "nolan", nolan, inside),
+        step(2250, 800, "pass", "nolan", inside, p(84, 32)),
+      ];
+    return [
+      step(0, 1400, "run", "nolan", nolan, inside),
+      step(0, 1400, "run", "blue2", target, outside),
+      step(250, 1250, "defend", "red1", undefined, p(outside.x - 5, outside.y)),
+      step(1100, 900, "pass", "blue1", carrier, outside),
+      step(1900, 400, "receive", "blue2", outside, outside),
+      step(2300, 900, "dribble", "blue2", outside, p(86, outside.y)),
+      step(2500, 800, "run", "nolan", inside, p(84, 32)),
+    ];
+  }
+
+  if (skill === "A06" && row.id === "WNG-30") {
+    const check = p(Math.max(18, nolan.x - 8), safeY(nolan.y + side * 7));
+    return [
+      step(0, 1100, "run", "nolan", nolan, check),
+      step(150, 1100, "defend", "red1", undefined, p(check.x + 6, check.y)),
+      step(950, 700, "pass", "blue1", carrier, check),
+      step(1550, 400, "receive", "nolan", check, check),
+      step(1850, 750, "pass", "nolan", check, carrier),
+      step(2500, 400, "receive", "blue1", carrier, carrier),
+    ];
+  }
+
+  if (skill === "A02") {
+    const escape = p(nolan.x - 8, safeY(nolan.y + side * 12));
+    return [
+      step(0, 1200, "run", "nolan", nolan, escape),
+      step(150, 1200, "defend", "red1", undefined, p(nolan.x + 4, nolan.y)),
+      step(1050, 850, "pass", "blue1", carrier, escape),
+      step(1800, 450, "receive", "nolan", escape, escape),
+      step(2250, 850, "pass", "nolan", escape, target),
+      step(3050, 450, "receive", "blue2", target, target),
+    ];
+  }
+
+  if (skill === "A07") {
+    // Stay a playable distance behind the ball without collapsing onto the
+    // touchline/goal-area boundary, where geometry repair can separate Tom
+    // from the pass endpoint.
+    const support = p(Math.max(12, nolan.x - 8), safeY(nolan.y + side * 7));
+    return [
+      step(0, 1200, "run", "nolan", nolan, support),
+      step(250, 1000, "defend", "red1", undefined, p(carrier.x + 5, carrier.y)),
+      step(1050, 800, "pass", "blue1", carrier, support),
+      step(1750, 450, "receive", "nolan", support, support),
+      step(2200, 850, "pass", "nolan", support, target),
+      step(3000, 450, "receive", "blue2", target, target),
+    ];
+  }
+
+  if (["A09", "A21", "A22"].includes(skill)) {
+    const runTo =
+      skill === "A21"
+        ? p(82, nolan.y < 32 ? 50 : 14)
+        : p(
+            skill === "A22" ? 78 : Math.min(86, nolan.x + 17),
+            safeY(nolan.y + side * 8),
+          );
+    return [
+      step(0, 1400, "run", "nolan", nolan, runTo),
+      step(
+        250,
+        1300,
+        "defend",
+        "red1",
+        undefined,
+        p(runTo.x - 5, runTo.y + side * 5),
+      ),
+      step(
+        950,
+        1000,
+        skill === "A21" ? "cross" : "pass",
+        "blue1",
+        carrier,
+        runTo,
+      ),
+      step(1850, 450, "receive", "nolan", runTo, runTo),
+      step(2350, 750, "shoot", "nolan", runTo, redGoal),
+      step(3150, 450, "celebrate", "blue2", undefined, undefined, "happy"),
+    ];
+  }
+
+  if (skill === "A10") {
+    const protect = p(nolan.x + 2, nolan.y);
+    return [
+      step(0, 800, "pass", "blue1", carrier, nolan),
+      step(700, 450, "receive", "nolan", nolan, nolan),
+      step(850, 1500, "defend", "red1", undefined, p(nolan.x + 5, nolan.y)),
+      step(1100, 1200, "shield", "nolan", nolan, protect),
+      step(2250, 850, "pass", "nolan", protect, target),
+      step(3050, 450, "receive", "blue2", target, target),
+    ];
+  }
+
+  if (["A11", "A12"].includes(skill)) {
+    const carryTo = p(Math.min(82, nolan.x + 15), safeY(nolan.y + side * 9));
+    return [
+      step(0, 700, "pass", "blue1", carrier, nolan),
+      step(650, 400, "receive", "nolan", nolan, nolan),
+      step(1000, 1400, "dribble", "nolan", nolan, carryTo),
+      step(
+        1100,
+        1300,
+        "defend",
+        "red1",
+        undefined,
+        p(carryTo.x + 3, carryTo.y + side * 4),
+      ),
+      step(2350, 800, "pass", "nolan", carryTo, target),
+      step(3100, 450, "receive", "blue2", target, target),
+    ];
+  }
+
+  if (skill === "A13") {
+    const returnTo = p(Math.min(86, nolan.x + 17), safeY(nolan.y + side * 7));
+    return [
+      step(0, 650, "pass", "blue1", carrier, nolan),
+      step(600, 400, "receive", "nolan", nolan, nolan),
+      step(1000, 650, "pass", "nolan", nolan, target),
+      step(1150, 1300, "run", "nolan", nolan, returnTo),
+      step(1600, 400, "receive", "blue2", target, target),
+      step(2000, 750, "pass", "blue2", target, returnTo),
+      step(2650, 400, "receive", "nolan", returnTo, returnTo),
+      step(3100, 700, "shoot", "nolan", returnTo, redGoal),
+    ];
+  }
+
+  if (["A17", "A18"].includes(skill)) {
+    const outsideY = nolan.y < 32 ? 10 : 54,
+      insideY = nolan.y < 32 ? 27 : 37,
+      runTo = p(
+        Math.min(86, nolan.x + 18),
+        skill === "A17" ? outsideY : insideY,
+      );
+    return [
+      step(0, 1450, "run", "nolan", nolan, runTo),
+      step(
+        150,
+        1300,
+        "dribble",
+        "blue2",
+        target,
+        p(target.x + 8, skill === "A17" ? insideY : outsideY),
+      ),
+      step(
+        450,
+        1200,
+        "defend",
+        "red1",
+        undefined,
+        p(runTo.x - 5, runTo.y + side * 5),
+      ),
+      step(
+        1400,
+        850,
+        "pass",
+        "blue2",
+        p(target.x + 8, skill === "A17" ? insideY : outsideY),
+        runTo,
+      ),
+      step(2150, 400, "receive", "nolan", runTo, runTo),
+      step(2550, 850, "cross", "nolan", runTo, p(82, 32)),
+      step(3350, 650, "shoot", "blue1", p(82, 32), redGoal),
+    ];
+  }
+
+  if (skill === "A19") {
+    const crossFrom = p(Math.max(70, nolan.x + 11), nolan.y < 32 ? 10 : 54),
+      runner = p(82, 32);
+    return [
+      step(0, 700, "pass", "blue1", carrier, nolan),
+      step(650, 400, "receive", "nolan", nolan, nolan),
+      step(1000, 1100, "dribble", "nolan", nolan, crossFrom),
+      step(650, 1500, "run", "blue2", target, runner),
+      step(
+        900,
+        1300,
+        "defend",
+        "red1",
+        undefined,
+        p(crossFrom.x - 5, crossFrom.y + side * 6),
+      ),
+      step(2050, 900, "cross", "nolan", crossFrom, runner),
+      step(2900, 400, "receive", "blue2", runner, runner),
+      step(3300, 650, "shoot", "blue2", runner, redGoal),
+    ];
+  }
+
+  if (skill === "A24") {
+    const rebound = p(78, safeY(32 + side * 9));
+    return [
+      step(0, 800, "shoot", "blue1", carrier, redGoal),
+      step(500, 700, "parry", "redGK", p(92, 32), rebound),
+      step(650, 1500, "run", "nolan", nolan, rebound),
+      step(1750, 400, "receive", "nolan", rebound, rebound),
+      step(2200, 700, "shoot", "nolan", rebound, redGoal),
+      step(3000, 450, "celebrate", "blue2", undefined, undefined, "happy"),
+    ];
+  }
+
+  if (skill === "A23") {
+    const finishAt = p(80, safeY(32 + side * 6)),
+      keeperRush = p(84, 32);
+    return [
+      step(0, 800, "pass", "blue1", carrier, nolan),
+      step(700, 400, "receive", "nolan", nolan, nolan),
+      step(850, 1200, "run", "redGK", p(92, 32), keeperRush),
+      step(1050, 1000, "dribble", "nolan", nolan, finishAt),
+      step(2050, 800, "shoot", "nolan", finishAt, redGoal),
+      step(2900, 450, "celebrate", "blue2", undefined, undefined, "happy"),
+    ];
+  }
+
+  if (skill === "A25") {
+    const fakeLane = p(nolan.x + 8, safeY(nolan.y + side * 12)),
+      release = p(Math.min(84, nolan.x + 22), safeY(nolan.y - side * 12));
+    return [
+      step(0, 700, "pass", "blue1", carrier, nolan),
+      step(650, 400, "receive", "nolan", nolan, nolan),
+      step(950, 500, "scan", "nolan", nolan, fakeLane),
+      step(1000, 1000, "defend", "red1", undefined, fakeLane),
+      step(1700, 950, "pass", "nolan", nolan, release),
+      step(2550, 450, "receive", "blue2", release, release),
+      step(2950, 750, "dribble", "blue2", release, p(88, release.y)),
+    ];
+  }
+
+  if (skill === "A26") {
+    const receiver = p(Math.min(78, nolan.x + 22), safeY(nolan.y + side * 9));
+    return [
+      step(0, 650, "pass", "blue1", carrier, nolan),
+      step(600, 400, "receive", "nolan", nolan, nolan),
+      step(850, 700, "scan", "nolan", nolan, p(nolan.x + 2, nolan.y)),
+      step(1450, 1000, "pass", "nolan", p(nolan.x + 2, nolan.y), receiver),
+      step(2350, 450, "receive", "blue2", receiver, receiver),
+      step(
+        2750,
+        1000,
+        "dribble",
+        "blue2",
+        receiver,
+        p(Math.min(88, receiver.x + 10), receiver.y),
+      ),
+    ];
+  }
+
+  if (skill === "A27") {
+    const pinAt = p(74, 32),
+      betweenLines = p(64, safeY(32 + side * 10));
+    return [
+      step(0, 1200, "run", "nolan", nolan, pinAt),
+      step(150, 1200, "defend", "red1", undefined, p(pinAt.x + 4, pinAt.y)),
+      step(900, 950, "pass", "blue1", carrier, betweenLines),
+      step(1750, 450, "receive", "blue2", betweenLines, betweenLines),
+      step(2100, 1000, "dribble", "blue2", betweenLines, p(78, betweenLines.y)),
+      step(2350, 900, "defend", "red2", undefined, p(82, betweenLines.y)),
+    ];
+  }
+
+  if (skill === "D01") {
+    const pressAt = p(Math.max(12, carrier.x - 4), safeY(carrier.y + side * 5)),
+      forcedBack = p(Math.min(88, carrier.x + 14), safeY(carrier.y - side * 7));
+    return [
+      step(0, 900, "dribble", "redBall", carrier, p(carrier.x - 3, carrier.y)),
+      step(100, 1200, "press", "nolan", nolan, pressAt),
+      step(
+        1050,
+        900,
+        "pass",
+        "redBall",
+        p(carrier.x - 3, carrier.y),
+        forcedBack,
+      ),
+      step(
+        1150,
+        1000,
+        "run",
+        "blue1",
+        undefined,
+        p(forcedBack.x - 6, forcedBack.y),
+      ),
+      step(2050, 500, "celebrate", "nolan", undefined, undefined, "happy"),
+    ];
+  }
+
+  if (skill === "D03") {
+    const blue1Start = l.actors.find((item) => item.id === "blue1")!.start,
+      danger = p(Math.max(18, carrier.x - 10), safeY(carrier.y + side * 4)),
+      pressure = p(Math.max(12, danger.x - 3), safeY(danger.y + side * 5)),
+      cover = p(Math.max(9, danger.x - 10), safeY(danger.y - side * 7)),
+      escape = p(48, side > 0 ? 52 : 12);
+    return [
+      step(0, 1050, "dribble", "redBall", carrier, danger),
+      step(150, 1200, "press", "blue1", blue1Start, pressure),
+      step(250, 1250, "defend", "nolan", nolan, cover),
+      step(1250, 850, "pass", "redBall", danger, p(cover.x + 2, cover.y)),
+      step(1800, 500, "block", "nolan", cover, p(cover.x + 2, cover.y)),
+      step(2250, 850, "clear", "nolan", p(cover.x + 2, cover.y), escape),
+    ];
+  }
+
+  if (skill === "D04") {
+    const blue1Start = l.actors.find((item) => item.id === "blue1")!.start,
+      weakY = carrier.y < 32 ? 50 : 14,
+      switchTo = p(Math.max(20, carrier.x - 6), weakY),
+      balance = p(Math.max(10, switchTo.x - 8), weakY < 32 ? 24 : 40);
+    return [
+      step(0, 1100, "press", "blue1", blue1Start, p(carrier.x - 3, carrier.y)),
+      step(150, 1250, "defend", "nolan", nolan, balance),
+      step(950, 950, "pass", "redBall", carrier, switchTo),
+      step(1900, 900, "run", "red2", undefined, switchTo),
+      step(2100, 550, "block", "nolan", balance, balance),
+    ];
+  }
+
+  if (skill === "D07") {
+    const attacker = p(
+        Math.max(18, carrier.x - 13),
+        safeY(carrier.y + side * 5),
+      ),
+      goalSide = p(Math.max(9, attacker.x - 6), attacker.y);
+    return [
+      step(0, 1300, "dribble", "redBall", carrier, attacker),
+      step(100, 1400, "defend", "nolan", nolan, goalSide),
+      step(1350, 750, "shoot", "redBall", attacker, p(3, 32)),
+      step(1600, 550, "block", "nolan", goalSide, goalSide),
+      step(2150, 800, "clear", "blue1", goalSide, p(46, side > 0 ? 52 : 12)),
+    ];
+  }
+
+  if (skill === "D06") {
+    const runner = p(Math.max(14, nolan.x - 7), safeY(nolan.y + side * 11)),
+      goalSide = p(runner.x - 5, runner.y);
+    return [
+      step(0, 1400, "run", "red2", undefined, runner),
+      step(200, 1500, "run", "nolan", nolan, goalSide),
+      step(900, 850, "pass", "redBall", carrier, runner),
+      step(1650, 500, "block", "nolan", goalSide, goalSide),
+      step(2150, 850, "clear", "blue1", goalSide, p(46, side > 0 ? 52 : 12)),
+      step(3050, 450, "celebrate", "nolan", undefined, undefined, "happy"),
+    ];
+  }
+
+  if (["D09", "D10"].includes(skill)) {
+    const blockAt = p(Math.max(12, nolan.x + 7), safeY(nolan.y + side * 5));
+    return [
+      step(0, 1200, "dribble", "redBall", carrier, blockAt),
+      step(250, 1200, "defend", "nolan", nolan, blockAt),
+      step(
+        1250,
+        750,
+        skill === "D09" ? "cross" : "shoot",
+        "redBall",
+        blockAt,
+        p(3, 32),
+      ),
+      step(1550, 550, "block", "nolan", blockAt, blockAt),
+      step(2100, 850, "clear", "blue1", blockAt, p(44, side > 0 ? 52 : 12)),
+      step(3000, 450, "celebrate", "nolan", undefined, undefined, "happy"),
+    ];
+  }
+
+  if (["D12", "D13"].includes(skill)) {
+    const dx = skill === "D12" ? 9 : -9,
+      blue1Start = l.actors.find((item) => item.id === "blue1")!.start,
+      blue2Start = l.actors.find((item) => item.id === "blue2")!.start,
+      moveWithLine = (start: Point, laneOffset = 0) =>
+        p(
+          Math.max(8, Math.min(88, start.x + (row.id === "DM-25" ? 14 : dx))),
+          safeY(start.y + laneOffset),
+        );
+    return [
+      step(
+        0,
+        850,
+        "pass",
+        "redBall",
+        carrier,
+        p(carrier.x + (skill === "D12" ? 8 : -6), carrier.y),
+      ),
+      step(350, 1200, "defend", "nolan", nolan, p(nolan.x + dx, nolan.y)),
+      step(
+        450,
+        1200,
+        "defend",
+        "blue1",
+        blue1Start,
+        moveWithLine(blue1Start, row.id === "DM-25" ? 5 : 0),
+      ),
+      step(
+        550,
+        1200,
+        "defend",
+        "blue2",
+        blue2Start,
+        moveWithLine(blue2Start, row.id === "DM-25" ? -3 : 0),
+      ),
+      step(
+        1900,
+        900,
+        "pass",
+        "redBall",
+        undefined,
+        p(Math.max(8, nolan.x - 5), nolan.y),
+      ),
+      step(2650, 550, "block", "nolan", undefined, p(nolan.x + dx, nolan.y)),
+    ];
+  }
+
+  if (skill === "D15") {
+    const nearPost = p(14, side > 0 ? 40 : 24),
+      protect = p(10, nearPost.y),
+      red2Start = l.actors.find((item) => item.id === "red2")!.start;
+    return [
+      step(0, 1400, "run", "red2", red2Start, nearPost),
+      step(150, 1400, "defend", "nolan", nolan, protect),
+      step(950, 950, "cross", "redBall", carrier, nearPost),
+      step(1650, 550, "block", "nolan", protect, nearPost),
+      step(2200, 850, "clear", "nolan", nearPost, p(46, side > 0 ? 52 : 12)),
+    ];
+  }
+
+  if (["D16", "D17"].includes(skill)) {
+    const protect = p(
+      Math.max(12, nolan.x + 3),
+      skill === "D17" ? 32 : safeY(nolan.y + side * 9),
+    );
+    return [
+      step(0, 1400, "run", "red2", undefined, protect),
+      step(200, 1500, "defend", "nolan", nolan, p(protect.x - 4, protect.y)),
+      step(950, 950, "cross", "redBall", carrier, protect),
+      step(1700, 550, "block", "nolan", p(protect.x - 4, protect.y), protect),
+      step(2200, 850, "clear", "nolan", protect, p(45, side > 0 ? 52 : 12)),
+      step(3100, 450, "celebrate", "blue1", undefined, undefined, "happy"),
+    ];
+  }
+
+  if (skill === "D18") {
+    const secondBall = p(Math.max(16, nolan.x + 4), safeY(nolan.y + side * 10));
+    return [
+      step(0, 900, "cross", "redBall", carrier, p(nolan.x - 3, 32)),
+      step(700, 700, "clear", "blue1", p(nolan.x - 3, 32), secondBall),
+      step(650, 1400, "run", "nolan", nolan, secondBall),
+      step(
+        900,
+        1300,
+        "run",
+        "red2",
+        undefined,
+        p(secondBall.x + 5, secondBall.y),
+      ),
+      step(1950, 450, "receive", "nolan", secondBall, secondBall),
+      step(2400, 850, "pass", "nolan", secondBall, p(49, side > 0 ? 49 : 15)),
+      step(3200, 400, "receive", "blue2", undefined, p(49, side > 0 ? 49 : 15)),
+    ];
+  }
+
+  if (skill === "D19") {
+    const danger = p(Math.max(10, nolan.x + 4), nolan.y),
+      wide = p(Math.min(62, danger.x + 26), side > 0 ? 52 : 12);
+    return [
+      step(0, 900, "pass", "redBall", carrier, danger),
+      step(300, 1100, "defend", "nolan", nolan, danger),
+      step(1050, 850, "clear", "nolan", danger, wide),
+      step(1850, 1200, "run", "blue1", undefined, p(wide.x - 5, wide.y)),
+      step(2000, 1200, "defend", "blue2", undefined, p(nolan.x - 7, 32)),
+      step(3150, 450, "celebrate", "nolan", undefined, undefined, "happy"),
+    ];
+  }
+
+  if (skill === "T01") {
+    const top = p(70, 13),
+      center = p(72, 32),
+      bottom = p(70, 51);
+    return [
+      step(0, 1500, "run", "nolan", nolan, nolan.y < 32 ? top : bottom),
+      step(0, 1500, "run", "blue1", carrier, center),
+      step(0, 1500, "run", "blue2", target, nolan.y < 32 ? bottom : top),
+      step(950, 900, "pass", "blue1", center, nolan.y < 32 ? top : bottom),
+      step(
+        1750,
+        400,
+        "receive",
+        "nolan",
+        undefined,
+        nolan.y < 32 ? top : bottom,
+      ),
+      step(2200, 800, "pass", "nolan", undefined, center),
+      step(2950, 650, "shoot", "blue1", center, redGoal),
+    ];
+  }
+
+  if (skill === "T02") {
+    const recover = p(Math.max(10, nolan.x - 17), safeY(32 + side * 5));
+    return [
+      step(0, 1500, "run", "nolan", nolan, recover),
+      step(
+        100,
+        1700,
+        "dribble",
+        "redBall",
+        carrier,
+        p(carrier.x - 12, carrier.y),
+      ),
+      step(
+        450,
+        1500,
+        "run",
+        "blue1",
+        undefined,
+        p(recover.x - 2, recover.y + 10),
+      ),
+      step(
+        1500,
+        750,
+        "pass",
+        "redBall",
+        undefined,
+        p(recover.x + 3, recover.y),
+      ),
+      step(2050, 550, "block", "nolan", recover, p(recover.x + 3, recover.y)),
+      step(2650, 800, "clear", "blue1", undefined, p(45, side > 0 ? 52 : 12)),
+    ];
+  }
+
+  if (["T04", "T05"].includes(skill)) {
+    const reset = p(Math.max(12, carrier.x - 8), safeY(carrier.y + side * 7));
+    return [
+      step(0, 700, "scan", "nolan", nolan, nolan),
+      step(
+        250,
+        1200,
+        skill === "T05" ? "shield" : "defend",
+        "nolan",
+        nolan,
+        nolan,
+      ),
+      step(650, 850, "pass", "blue1", carrier, reset),
+      step(1450, 400, "receive", "blue2", reset, reset),
+      step(1850, 850, "pass", "blue2", reset, carrier),
+      step(2650, 400, "receive", "blue1", carrier, carrier),
+      step(3100, 450, "celebrate", "nolan", undefined, undefined, "happy"),
+    ];
+  }
+
+  if (skill === "G01") {
+    const setAt = p(10, 32),
+      shotFrom = p(26, safeY(32 + side * 8)),
+      saveAt = p(7, side > 0 ? 39 : 25);
+    return [
+      step(0, 650, "set", "nolan", nolan, setAt),
+      step(150, 1200, "dribble", "redBall", carrier, shotFrom),
+      step(1300, 750, "shoot", "redBall", shotFrom, p(3, saveAt.y)),
+      step(1450, 700, "dive", "nolan", setAt, saveAt),
+      step(1950, 450, "block", "nolan", saveAt, saveAt),
+      step(2450, 800, "clear", "blue1", saveAt, p(42, side > 0 ? 52 : 12)),
+    ];
+  }
+
+  if (skill === "G06") {
+    const setAt = p(11, 32),
+      shotFrom = p(18, safeY(32 + side * 5)),
+      saveAt = p(8, shotFrom.y);
+    return [
+      step(0, 1200, "dribble", "redBall", carrier, shotFrom),
+      step(300, 650, "set", "nolan", nolan, setAt),
+      step(1300, 700, "shoot", "redBall", shotFrom, p(3, shotFrom.y)),
+      step(1450, 650, "dive", "nolan", setAt, saveAt),
+      step(1950, 450, "catch", "nolan", saveAt, saveAt),
+    ];
+  }
+
+  if (skill === "G07") {
+    const claimAt = p(14, safeY(32 + side * 4)),
+      outlet = p(31, side > 0 ? 50 : 14);
+    return [
+      step(0, 1100, "cross", "redBall", carrier, claimAt),
+      step(100, 500, "set", "nolan", nolan, nolan),
+      step(250, 1250, "run", "red2", undefined, p(claimAt.x + 5, claimAt.y)),
+      step(350, 1100, "run", "nolan", nolan, claimAt),
+      step(1350, 450, "catch", "nolan", claimAt, claimAt),
+      step(1950, 850, "pass", "nolan", claimAt, outlet),
+      step(2700, 450, "receive", "blue2", outlet, outlet),
+    ];
+  }
+
+  if (skill === "G08") {
+    const crowd = p(14, 32),
+      wide = p(22, side > 0 ? 52 : 12);
+    return [
+      step(0, 1100, "cross", "redBall", carrier, crowd),
+      step(100, 1200, "run", "red2", undefined, crowd),
+      step(250, 1100, "run", "nolan", nolan, p(12, 32)),
+      step(1150, 650, "parry", "nolan", p(12, 32), wide),
+      step(1850, 900, "run", "blue1", undefined, p(wide.x - 4, wide.y)),
+    ];
+  }
+
+  if (skill === "G09") {
+    const scanAt = p(nolan.x + 1, nolan.y + side),
+      outlet = p(Math.max(27, target.x), side > 0 ? 50 : 14);
+    return [
+      step(0, 450, "catch", "nolan", nolan, nolan),
+      step(500, 600, "scan", "nolan", nolan, scanAt),
+      step(1050, 950, "pass", "nolan", scanAt, outlet),
+      step(1900, 450, "receive", "blue2", outlet, outlet),
+      step(2300, 900, "dribble", "blue2", outlet, p(44, outlet.y)),
+      step(1200, 1000, "press", "red1", undefined, p(outlet.x + 8, 32)),
+    ];
+  }
+
+  if (skill === "G12") {
+    const unreachable = p(24, side > 0 ? 49 : 15),
+      saveAt = p(7, side > 0 ? 38 : 26);
+    return [
+      step(0, 1100, "cross", "redBall", carrier, unreachable),
+      step(150, 650, "set", "nolan", nolan, p(8, 32)),
+      step(950, 400, "receive", "red2", unreachable, unreachable),
+      step(1400, 750, "shoot", "red2", unreachable, p(3, saveAt.y)),
+      step(1550, 700, "dive", "nolan", p(8, 32), saveAt),
+      step(2050, 450, "catch", "nolan", saveAt, saveAt),
+    ];
+  }
+
+  if (skill === "G13") {
+    const goalLine = p(8, 32),
+      saveAt = p(7, side > 0 ? 38 : 26),
+      shotFrom = p(26, safeY(32 + side * 8));
+    return [
+      step(0, 1300, "run", "nolan", nolan, goalLine),
+      step(100, 1200, "dribble", "redBall", carrier, shotFrom),
+      step(1250, 450, "set", "nolan", goalLine, goalLine),
+      step(1750, 750, "shoot", "redBall", shotFrom, p(3, saveAt.y)),
+      step(1900, 650, "dive", "nolan", goalLine, saveAt),
+      step(2350, 450, "block", "nolan", saveAt, saveAt),
+    ];
+  }
+
+  return raw;
+}
+
 function makeScene(row: InventoryRow, index: number): AnimatedScenario {
   const meta = metadata[row.id];
   if (!meta) throw new Error(`Missing scene metadata for ${row.id}`);
@@ -3465,7 +4338,17 @@ function makeScene(row: InventoryRow, index: number): AnimatedScenario {
   ) => {
     const semantic = ensurePhoneReadableSteps(
       label,
-      establishTomPossession(l, enforceOptionResult(label, quality, l, raw)),
+      establishTomPossession(
+        l,
+        coachProofAnimation(
+          row,
+          index,
+          l,
+          quality,
+          label,
+          enforceOptionResult(label, quality, l, raw),
+        ),
+      ),
       l,
     );
     const reactions = [

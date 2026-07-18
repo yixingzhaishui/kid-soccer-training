@@ -93,9 +93,10 @@ export function scoreScenario(scene: AnimatedScenario): ScenarioQuality {
         const shooter = scene.actors.find((actor) => actor.id === shot.actorId),
           keeper = scene.actors.find(
             (actor) => actor.goalkeeper && actor.team !== shooter?.team,
-          );
+          ),
+          opponentGoalX = shooter?.team === "blue" ? 97 : 3;
         return Boolean(
-          shooter && keeper && Math.abs(shot.to!.x - keeper.start.x) <= 8,
+          shooter && keeper && Math.abs(shot.to!.x - opponentGoalX) <= 8,
         );
       }),
   );

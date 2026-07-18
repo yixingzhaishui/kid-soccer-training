@@ -46,6 +46,8 @@ Existing scenario IDs, saved scores, and approved best-strategy wording must be 
 | A23 | Finish or square | Shot angle is narrow; teammate is open centrally | Choose the higher-value chance | Ball reaches open teammate or clear shooting lane | Shooting through defender or goalkeeper |
 | A24 | Rebound reaction | Goalkeeper cannot hold a shot | Move when shot is struck | Nolan reaches second ball first | Celebrating or standing still |
 | A25 | Disguise or reverse pass | Defender shifts toward Nolan's eyes or body angle | Sell one pass, then release into the newly opened lane | Defender moves away before the ball travels through the clear lane | Passing through a defender who never moved |
+| A26 | Break a line with a pass | A teammate appears beyond the opponent midfield line | Receive facing forward and pass through an open lane | The visible blue receiver controls beyond the line | Forcing a pass through a defender or toward Blue's goal |
+| A27 | Pin a center defender | Center defender wants to step toward the ball while Nolan is the highest striker | Hold a goal-side central position that occupies the defender | Defender cannot step out and a teammate receives between the lines | Wandering away so the defender can press the ball freely |
 | D01 | Pressure the ball | Nolan is nearest and ball receiver has a poor touch | Close under control | Opponent plays backward or loses control | Sprinting past the ball |
 | D02 | Curve the press | Opponent has two passing sides | Approach on a curve to remove one side | Ball is forced toward teammate pressure | Running straight and leaving both sides open |
 | D03 | Cover | Teammate steps to pressure | Protect space behind that teammate | A beaten press still meets Nolan | Two defenders attacking the same ball |
@@ -82,6 +84,8 @@ Existing scenario IDs, saved scores, and approved best-strategy wording must be 
 | G09 | Distribute open side | Nolan controls ball and one side is unpressed | Scan and roll, throw, or pass there | Blue begins with a free player | Rolling centrally into pressure |
 | G10 | Organize | Set piece or unmarked runner appears | Point, call, and assign a defender | Every dangerous attacker is marked | Staying silent |
 | G11 | Recover for second save | First save leaves ball live | Get feet under body and reset | Nolan saves or gathers rebound | Watching the first save |
+| G12 | Hold for unreachable cross | Outswinging cross travels beyond a safe claiming path | Stay connected to the goal and prepare for the next touch | Nolan remains balanced and controls the second action | Charging through traffic for a ball he cannot reach |
+| G13 | Recover to the goal line | Nolan has moved away from goal and the ball is played over or around him | Sprint back on the shortest line and set before the shot | Nolan reaches the goal line in time to save | Watching the ball or recovering on a curved route |
 
 ## Role duty coverage
 
@@ -90,13 +94,13 @@ Every set of 30 scenarios must draw from these duties. Repeating a skill is allo
 | Role | Required skill coverage |
 |---|---|
 | Winger | A02, A04, A05, A08, A09, A11, A12, A13, A19, A20, A21, D01, D02, D06, D16, T01, T02, T05 |
-| Striker | A02, A09, A10, A13, A14, A22, A23, A24, D02, D15, T01 |
+| Striker | A02, A09, A10, A13, A14, A22, A23, A24, A27, D02, D15, T01 |
 | Central midfielder | A01, A03, A06, A07, A11, A14, A15, A16, A23, D03, D04, D06, D18, T04, T05 |
 | Attacking midfielder | A01, A02, A03, A11, A13, A14, A15, A23, A24, D01, D05, T03 |
 | Defensive midfielder | A01, A03, A06, A07, A10, A15, A16, D03, D04, D05, D06, D11, D12, D17, D18, D20, T04 |
 | Fullback | A03, A06, A15, A17, A18, A19, A20, D03, D06, D08, D09, D12, D16, D17, T02, T04 |
 | Center defender | A01, A03, A06, A07, A15, D03, D07, D12, D13, D14, D15, D16, D17, D18, D19, D20, T04 |
-| Goalkeeper | G01, G02, G03, G04, G05, G06, G07, G08, G09, G10, G11 |
+| Goalkeeper | G01, G02, G03, G04, G05, G06, G07, G08, G09, G10, G11, G12, G13 |
 | Teamwork | A05, A06, A07, A13, A14, A15, D01, D03, D04, D11, D12, T01, T02, T04, T05 |
 
 ## Scenario approval record

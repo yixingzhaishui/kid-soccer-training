@@ -76,9 +76,18 @@ Then run:
 
 ```bash
 npm run build
-npm test -- --run
+npm test
+npm run audit:scenes
 npm run test:e2e
 npm run format:check
+```
+
+`npm run audit:scenes` prints the full skill distribution and must report an
+empty `failures` array. To inspect the exact actors and ordered animation steps
+for one or more cases, append their IDs, for example:
+
+```bash
+npm run audit:scenes -- DM-01 GK-28
 ```
 
 Playwright runs in desktop Chromium, iPhone-sized Chromium, and iPhone-sized WebKit. Additional commands:
@@ -92,6 +101,6 @@ npm run format
 
 ## Completion status
 
-Implemented: 30 playable scenarios for each of the eight positional roles, plus 10 teamwork stories; 61 mapped child skills; animated active opponents; neutral shuffled choices; working outcome predictions; visible cues; adaptive practice; comeback scoring; slow replay; age-adjusted terminology; option-centered design scoring; receiver, body-occlusion, phone-rendered option contrast, trajectory, option-preview/consequence agreement, and goal-direction validation; saved progress, Parent Mode, speech, replay, re-choose, and side-by-side comparison. Source formatting is enforced in CI. The automated suite currently contains 37 curriculum/unit tests and 36 browser tests across desktop Chromium, phone-sized Chromium, and phone-sized WebKit.
+Implemented: 30 playable scenarios for each of the eight positional roles, plus 10 teamwork stories; 65 mapped child skills; animated active opponents; neutral shuffled choices; working outcome predictions; visible cues; adaptive practice; comeback scoring; slow replay; age-adjusted terminology; option-centered design scoring; receiver, body-occlusion, phone-rendered option contrast, trajectory, option-preview/consequence agreement, and goal-direction validation; saved progress, Parent Mode, speech, replay, re-choose, and side-by-side comparison. Source formatting is enforced in CI. The automated suite currently contains 43 curriculum/unit tests and 36 browser tests across desktop Chromium, phone-sized Chromium, and phone-sized WebKit.
 
-Remaining: 65 core stories come from the detailed reviewed inventory; 185 expansion stories use varied, quality-gated generation and improved coaching language. Those 185 stories have not each received an independent human editorial pass, and the full curriculum has not been certified by a licensed youth coach. Automated originality and football-consistency checks are not represented as a substitute for that human curriculum review.
+The title-to-skill assignment has now been reviewed across all 250 stories, and every best timeline passes the named-skill coach contract, possession, direction, open-lane, opponent-response, phone-preview, and consequence gates. This is recorded as `Coach-verified` in `CASE_REVIEW.md`; it is not presented as certification by an independent licensed youth coach.

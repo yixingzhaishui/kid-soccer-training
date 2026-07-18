@@ -314,6 +314,8 @@ describe("role-specific animation curriculum", () => {
       "A23",
       "A24",
       "A25",
+      "A26",
+      "A27",
       "D01",
       "D02",
       "D03",
@@ -350,6 +352,8 @@ describe("role-specific animation curriculum", () => {
       "G09",
       "G10",
       "G11",
+      "G12",
+      "G13",
     ]);
     for (const scene of animatedScenarios) {
       expect(skillIds.has(scene.skillId), scene.id).toBe(true);
@@ -478,7 +482,7 @@ describe("role-specific animation curriculum", () => {
             `${scene.id}/${result.choiceId}`,
           ).toBeDefined();
           expect(
-            Math.abs(shot.to!.x - opponentKeeper!.start.x),
+            Math.abs(shot.to!.x - (shooter.team === "blue" ? 97 : 3)),
             `${scene.id}/${result.choiceId}`,
           ).toBeLessThanOrEqual(8);
         }
