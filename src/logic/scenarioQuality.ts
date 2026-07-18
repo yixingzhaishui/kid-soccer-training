@@ -7,6 +7,7 @@ import {
   type HardFailure,
 } from "./spatialQuality";
 import { timelineDuration } from "./timeline";
+import { coachFailures } from "./coachQuality";
 
 export type QualityCriterion = {
   id: string;
@@ -67,6 +68,7 @@ export function scoreScenario(scene: AnimatedScenario): ScenarioQuality {
     nolan = scene.actors.find((actor) => actor.id === "nolan");
   const semantic = semanticIssues(scene),
     spatial = hardFailures(scene),
+    coaching = coachFailures(scene),
     sameRoute = spatial.some((failure) => failure.code === "OPTIONS_LOOK_SAME"),
     blockedReceiver = spatial.some(
       (failure) => failure.code === "RECEIVER_BLOCKED",
@@ -254,6 +256,10 @@ export function scoreScenario(scene: AnimatedScenario): ScenarioQuality {
   ];
   const failures = [
     ...spatial,
+    ...coaching.map((failure) => ({
+      code: "OPTIONS_LOOK_SAME" as const,
+      message: `${failure.code}: ${failure.message}`,
+    })),
     ...semantic.map((issue) => ({
       code: "OPTIONS_LOOK_SAME" as const,
       message: `${issue.choiceId}: ${issue.message}`,

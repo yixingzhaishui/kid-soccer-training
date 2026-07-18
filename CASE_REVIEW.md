@@ -26,6 +26,10 @@ actual animation timeline and phone-size option previews.
    specific tactical cost.
 7. **Phone preview:** the option card shows Tom's actual route and ball path,
    with a clearly different endpoint/direction from every other option.
+8. **Named-skill proof:** the animation must visibly prove the exact coaching
+   principle. A switch must reach a different lane; a cutback must travel
+   backward from the end line; a screen must occupy the passer-to-target lane;
+   a tackle must follow an exposed touch; delay must allow teammates to recover.
 
 ## Status meanings
 
@@ -46,7 +50,7 @@ the test that prevents regression.
 
 | ID | Teaching action | Current status | Review evidence / repair |
 |---|---|---|---|
-| DM-01 | Screen the striker | Pending | Verify screen blocks ball-to-striker lane without chasing carrier. |
+| DM-01 | Screen the striker | Approved | Rebuilt with the opposing attacking midfielder carrying, the striker checking between lines, and Tom moving into the exact passer-to-striker lane. Correct and poor routes are visibly different at 390×844; the correct consequence blocks the central pass and clears wide. |
 | DM-02 | Escape the press | Pending | Verify open body/pass lane and not a blind turn. |
 | DM-03 | Cover inside | Pending | Verify Tom covers partner and center, not the ball. |
 | DM-04 | Track the runner | Pending | Verify goal-side tracking and return-pass denial. |
@@ -71,7 +75,7 @@ the test that prevents regression.
 | DM-23 | Stop central counter | Pending | Verify ball-to-goal lane is protected. |
 | DM-24 | Defend box edge | Pending | Verify controlled shot block. |
 | DM-25 | Organize midfield line | Pending | Verify connected line movement. |
-| DM-26 | Choose when to tackle | Pending | Verify tackle occurs only after exposed touch. |
+| DM-26 | Choose when to tackle | Repairing | Rebuilt so Tom jockeys first, the red carrier takes a visible heavy touch, and only then does Tom win the ball. Automated coach gate passes; phone visual sign-off remains. |
 | DM-27 | Recycle while protecting lead | Pending | Verify safe possession and no blind forward pass. |
 | DM-28 | Find advanced eight | Pending | Verify forward receiver is open and facing play. |
 | DM-29 | Support behind risky pass | Pending | Verify reset angle remains available. |
@@ -88,6 +92,34 @@ the test that prevents regression.
 - blocked helpful pass rejection;
 - active teammate and opponent movement;
 - choice preview/consequence alignment.
+
+## Coach-level remediation batch — 2026-07-18
+
+The upgraded audit initially rejected seven cases that the old 100-point
+system incorrectly allowed. The scoring system now caps any case with a named
+skill contradiction below the required score.
+
+| Scenario | Finding | Repair | Status |
+|---|---|---|---|
+| DM-01 | Tom chased instead of screening the striker lane. | Authored a new 7v7 screen: striker checks, Tom occupies the lane, central pass is blocked and cleared wide. | Approved after phone visual review |
+| DM-26 | The tackle had no visible heavy-touch trigger. | Added controlled jockey, exposed touch, timed ball win, and safe outlet. | Repairing — automated gates pass |
+| FB-12 | “Cutback” traveled forward into the box. | Tom now reaches the end line and passes backward to a late runner. | Repairing — automated gates pass |
+| TW-05 | “Recycle and switch” only recycled backward. | Ball now returns to support and then crosses into the weak-side lane. | Repairing — automated gates pass |
+| AM-09 | Weak-side pocket stayed in the same lane. | Tom moves away from the marker into the opposite half-space before receiving. | Repairing — automated gates pass |
+| CB-07 | Open-fullback pass stayed too central. | Center back scans and passes diagonally to a clearly wide fullback. | Repairing — automated gates pass |
+| GK-02 | Sweeper-keeper scene was misclassified as distribution. | Core goalkeeper skills are now assigned explicitly; GK-02 is G05 Sweep. | Repairing — automated gates pass |
+
+### New hard coaching gates
+
+- `A15`: a switch must move the ball at least 18 normalized units into a
+  clearly different lane;
+- `A20`: a cutback must begin near the end line and travel at least five units
+  backward;
+- `D05`: a screen must finish within six units of the actual passing lane;
+- `D11`: Tom must defend without kicking while at least two teammates recover;
+- `D20`: a tackle must follow a visible exposed touch;
+- `G03`: a parry must leave the central rebound corridor;
+- `G09`: goalkeeper distribution must start a forward attack.
 
 These are gates, not approval. The individual review rows above are the source
 of truth for tactical approval.

@@ -670,6 +670,16 @@ function skillIdFor(row: InventoryRow) {
   const text = `${row.decision} ${row.trigger}`.toLowerCase(),
     id = row.id,
     defensive = defensiveIds.has(id) || row.assets.startsWith("defensive");
+  const coreGoalkeeperSkills: Record<string, string> = {
+    "GK-01": "G01",
+    "GK-02": "G05",
+    "GK-03": "G03",
+    "GK-04": "G09",
+    "GK-05": "G10",
+    "GK-06": "G07",
+    "GK-07": "G11",
+  };
+  if (coreGoalkeeperSkills[id]) return coreGoalkeeperSkills[id];
   if (!id.startsWith("GK-") && !defensive) return attackingSkillId(row, text);
   if (id === "CB-13") return "D13";
   if (id === "CB-27") return "D12";
@@ -1161,6 +1171,7 @@ function enforceOptionResult(
   }
   if (intent === "ball") {
     const action = namedKick(label);
+    if (/recycle.*switch/i.test(label) && quality === "good") return raw;
     if (/recycle|play back|return/i.test(label)) {
       const reset = p(Math.min(start.x - 8, l.carrier.x), l.carrier.y);
       return [
@@ -1934,6 +1945,38 @@ function layout(row: InventoryRow, index: number) {
     };
   }
   if (defending) {
+    if (row.id === "DM-01") {
+      const screenNolan = p(25, 48),
+        redBall = p(48, 32),
+        danger = p(22, 32),
+        screen = p(35, 32),
+        active = [
+          actor("nolan", "blue", row.role, screenNolan, 7, "Nolan"),
+          actor("blue1", "blue", "Center defender", p(19, 42), 4),
+          actor("blue2", "blue", "Fullback", p(18, 18), 3),
+          actor("blueGK", "blue", "Goalkeeper", p(8, 32), 1, undefined, true),
+          actor("redBall", "red", "Attacking midfielder", redBall, 10),
+          actor("red2", "red", "Striker", p(30, 20), 9),
+          actor("red3", "red", "Winger", p(54, 49), 11),
+          actor("redGK", "red", "Goalkeeper", p(92, 32), 1, undefined, true),
+        ];
+      return {
+        defending: true,
+        nolan: screenNolan,
+        carrier: redBall,
+        goodTo: screen,
+        badTo: p(45, 38),
+        target: danger,
+        activeArea: {
+          x: 18,
+          y: 14,
+          width: 38,
+          height: 40,
+          label: "screen striker lane",
+        },
+        actors: completeMatch(active, index),
+      };
+    }
     const defensiveX: Record<SceneCategory, [number, number]> = {
       winger: [38, 50],
       striker: [62, 72],
@@ -2259,6 +2302,99 @@ function dutyGoodAnimation(
     { nolan, carrier, goodTo, target } = l,
     far = p(Math.min(88, target.x + 7), target.y),
     goal = p(97, 32);
+  if (row.id === "DM-01") {
+    const danger = p(22, 32),
+      screen = p((carrier.x + danger.x) / 2, (carrier.y + danger.y) / 2);
+    return [
+      step(0, 1200, "run", "red2", undefined, danger),
+      step(150, 1200, "defend", "nolan", nolan, screen),
+      step(
+        550,
+        900,
+        "dribble",
+        "redBall",
+        carrier,
+        p(carrier.x - 4, carrier.y),
+      ),
+      step(1450, 850, "pass", "redBall", p(carrier.x - 4, carrier.y), danger),
+      step(1950, 600, "block", "nolan", screen, screen),
+      step(2500, 850, "clear", "blue1", screen, p(46, 52)),
+      step(3400, 500, "celebrate", "nolan", undefined, undefined, "happy"),
+    ];
+  }
+  if (row.id === "DM-26") {
+    const heavyTouch = p(carrier.x - 11, carrier.y + (index % 2 ? 5 : -5));
+    return [
+      step(0, 900, "defend", "nolan", nolan, p(carrier.x - 7, carrier.y)),
+      step(250, 1300, "dribble", "redBall", carrier, heavyTouch),
+      step(
+        1450,
+        650,
+        "block",
+        "nolan",
+        p(carrier.x - 7, carrier.y),
+        heavyTouch,
+      ),
+      step(2050, 700, "receive", "blue1", heavyTouch, heavyTouch),
+      step(2700, 850, "pass", "blue1", heavyTouch, p(48, 50)),
+      step(3500, 500, "celebrate", "nolan", undefined, undefined, "happy"),
+    ];
+  }
+  if (row.id === "FB-12") {
+    const endLine = p(86, nolan.y < 32 ? 10 : 54),
+      lateRunner = p(75, nolan.y < 32 ? 27 : 37);
+    return [
+      step(0, 700, "pass", "blue1", carrier, nolan),
+      step(650, 450, "receive", "nolan", nolan, nolan),
+      step(1050, 1300, "dribble", "nolan", nolan, endLine),
+      step(900, 1500, "run", "blue2", target, lateRunner),
+      step(
+        1250,
+        1300,
+        "defend",
+        "red1",
+        undefined,
+        p(82, nolan.y < 32 ? 18 : 46),
+      ),
+      step(2350, 850, "cross", "nolan", endLine, lateRunner),
+      step(3100, 450, "receive", "blue2", lateRunner, lateRunner),
+      step(3550, 750, "shoot", "blue2", lateRunner, goal),
+    ];
+  }
+  if (row.id === "TW-05") {
+    const weakSide = p(67, nolan.y < 32 ? 52 : 12);
+    return [
+      step(0, 650, "pass", "blue1", carrier, nolan),
+      step(600, 450, "receive", "nolan", nolan, nolan),
+      step(1050, 700, "pass", "nolan", nolan, carrier),
+      step(1700, 450, "receive", "blue1", carrier, carrier),
+      step(2150, 1200, "pass", "blue1", carrier, weakSide),
+      step(3250, 450, "receive", "blue2", weakSide, weakSide),
+      step(3650, 900, "dribble", "blue2", weakSide, p(78, weakSide.y)),
+    ];
+  }
+  if (row.id === "AM-09") {
+    const pocket = p(Math.max(62, nolan.x + 4), nolan.y < 32 ? 49 : 15);
+    return [
+      step(0, 1200, "run", "nolan", nolan, pocket),
+      step(300, 1200, "defend", "red1", undefined, p(nolan.x + 5, nolan.y)),
+      step(1100, 1100, "pass", "blue1", carrier, pocket),
+      step(2100, 450, "receive", "nolan", pocket, pocket),
+      step(2550, 850, "pass", "nolan", pocket, p(80, 34)),
+      step(3350, 450, "receive", "blue2", p(80, 34), p(80, 34)),
+    ];
+  }
+  if (row.id === "CB-07") {
+    const openFullback = p(52, nolan.y < 32 ? 52 : 12);
+    return [
+      step(0, 650, "pass", "blue1", carrier, nolan),
+      step(600, 450, "receive", "nolan", nolan, nolan),
+      step(1000, 550, "scan", "nolan", nolan, p(nolan.x + 2, nolan.y)),
+      step(1500, 1200, "pass", "nolan", p(nolan.x + 2, nolan.y), openFullback),
+      step(2600, 450, "receive", "blue2", openFullback, openFullback),
+      step(3000, 1000, "dribble", "blue2", openFullback, p(65, openFullback.y)),
+    ];
+  }
   if (row.id === "DM-07")
     return [
       // Tom first drops into the split. This is a short, controlled movement
