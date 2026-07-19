@@ -134,4 +134,6 @@ export type Settings = {
   reducedMotion: boolean;
   childName: string;
   languageLevel: "younger" | "older";
+  /** The child's real 2-2-2 position id from the role map (e.g. "lf"). */
+  positionId?: string;
 };

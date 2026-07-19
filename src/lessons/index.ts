@@ -24,6 +24,7 @@ import {
 } from "../logic/geometryRepair";
 import { visuallyOccludes, visuallySameOnPhone } from "../logic/spatialQuality";
 import { repairTacticalTrajectory } from "../logic/tacticalQuality";
+import { bespokeAnimationIds, sceneOverrides } from "./sceneOverrides";
 
 type InventoryRow = {
   id: string;
@@ -501,6 +502,24 @@ for (const config of expansionConfigs) {
       assets: `${defensive ? "defensive " : ""}${title.toLowerCase()} movement, ball, teammates, opponents`,
     });
   });
+}
+// Individually reviewed scene fixes: replace template-generated triggers and
+// consequences (and the rare wrong title) with hand-written, scene-specific
+// text. Applied only to expansion rows; core rows come from the reviewed
+// inventory markdown.
+for (const row of expansionRows) {
+  const override = sceneOverrides[row.id];
+  if (!override) continue;
+  if (override.trigger) row.trigger = override.trigger;
+  if (override.good) row.good = override.good;
+  if (override.poor) row.poor = override.poor;
+  if (override.title) {
+    row.decision = override.title;
+    metadata[row.id].title = override.title;
+  }
+  if (override.goodLabel) metadata[row.id].goodLabel = override.goodLabel;
+  if (override.poorLabel) metadata[row.id].poorLabel = override.poorLabel;
+  if (override.icon) metadata[row.id].icon = override.icon;
 }
 const rows: InventoryRow[] = [...baseRows, ...expansionRows];
 const reviewedCoreIds = new Set(baseRows.map((row) => row.id));
@@ -2084,7 +2103,14 @@ function layout(row: InventoryRow, index: number) {
     return {
       defending: true,
       nolan,
-      carrier: redBall,
+      // GK-15 and GK-29 teach back-pass play: the ball must visibly start
+      // with the blue defender who plays it back, not with a red carrier.
+      carrier:
+        row.id === "GK-15"
+          ? p(22, 20)
+          : row.id === "GK-29"
+            ? p(30, 51)
+            : redBall,
       goodTo: p(13, 30 + (index % 3) * 3),
       badTo: p(7, 34),
       target,
@@ -2145,7 +2171,9 @@ function layout(row: InventoryRow, index: number) {
         category === "teamwork"
           ? 32
           : y;
-    const nolan = p(nolanX + unique, defenseY),
+    // FB-25 recovers after an attacking corner, so Tom begins high and wide
+    // instead of already sitting in his defensive slot.
+    const nolan = row.id === "FB-25" ? p(52, 12) : p(nolanX + unique, defenseY),
       redBall = p(
         carrierX + jitter / 3,
         Math.max(12, Math.min(52, defenseY - 3)),
@@ -2450,6 +2478,279 @@ function dutyGoodAnimation(
     { nolan, carrier, goodTo, target } = l,
     far = p(Math.min(88, target.x + 7), target.y),
     goal = p(97, 32);
+  // ── Individually authored timelines (2026-07-18 similarity review). Each of
+  // these scenes previously shared a template animation with another scene in
+  // its pack; every branch below proves its own named skill distinctly. ──
+  if (row.id === "STR-12") {
+    const high = target.y < 32,
+      nearPost = p(82, high ? 28 : 36),
+      backZone = p(84, high ? 37 : 27);
+    return [
+      step(0, 700, "pass", "blue1", carrier, target),
+      step(650, 400, "receive", "blue2", target, target),
+      step(900, 900, "run", "nolan", nolan, nearPost),
+      step(1000, 1100, "run", "blue1", carrier, backZone),
+      step(1700, 800, "cross", "blue2", target, backZone),
+      step(2400, 400, "turn", "nolan", nearPost, p(nearPost.x + 2, nearPost.y)),
+      step(2650, 400, "receive", "blue1", backZone, backZone),
+      step(3050, 700, "shoot", "blue1", backZone, goal),
+      step(3750, 400, "celebrate", "nolan", undefined, undefined, "happy"),
+    ];
+  }
+  if (row.id === "STR-17") {
+    const headerPoint = p(83, 29);
+    return [
+      step(0, 500, "scan", "nolan", nolan, nolan),
+      step(450, 900, "cross", "blue2", target, headerPoint),
+      step(800, 900, "run", "nolan", nolan, headerPoint),
+      step(500, 900, "defend", "red1", undefined, p(80, 35)),
+      step(1800, 700, "shoot", "nolan", headerPoint, p(96, 29)),
+      step(2600, 500, "celebrate", "blue2", undefined, undefined, "happy"),
+    ];
+  }
+  if (row.id === "STR-18") {
+    const high = target.y < 32,
+      endLine = p(88, high ? 10 : 54),
+      spot = p(81, 34);
+    return [
+      step(0, 700, "pass", "blue1", carrier, target),
+      step(650, 400, "receive", "blue2", target, target),
+      step(1000, 1000, "dribble", "blue2", target, endLine),
+      step(1000, 1100, "run", "nolan", nolan, spot),
+      step(1100, 1100, "defend", "red1", undefined, p(88, high ? 24 : 40)),
+      step(2100, 800, "cross", "blue2", endLine, spot),
+      step(2850, 400, "receive", "nolan", spot, spot),
+      step(3250, 700, "shoot", "nolan", spot, p(96, 30)),
+    ];
+  }
+  if (row.id === "STR-29") {
+    const high = target.y < 32,
+      dropZone = p(68, target.y),
+      farPost = p(84, high ? 40 : 24);
+    return [
+      step(0, 650, "pass", "blue1", carrier, target),
+      step(600, 350, "receive", "blue2", target, target),
+      step(950, 700, "cross", "blue2", target, p(82, 34)),
+      step(1600, 500, "clear", "red1", p(82, 34), dropZone),
+      step(2000, 600, "run", "blue2", target, dropZone),
+      step(2100, 1000, "run", "nolan", nolan, farPost),
+      step(2600, 350, "receive", "blue2", dropZone, dropZone),
+      step(2950, 750, "cross", "blue2", dropZone, farPost),
+      step(3650, 600, "shoot", "nolan", farPost, goal),
+    ];
+  }
+  if (row.id === "CM-16") {
+    const wideY = target.y,
+      support = p(56, Math.max(9, Math.min(55, wideY + (wideY < 32 ? 9 : -9)))),
+      upLine = p(76, wideY);
+    return [
+      step(0, 700, "pass", "blue1", carrier, target),
+      step(650, 400, "receive", "blue2", target, target),
+      step(750, 900, "press", "red1", undefined, p(target.x + 4, target.y)),
+      step(1000, 900, "run", "nolan", nolan, support),
+      step(1950, 700, "pass", "blue2", target, support),
+      step(2600, 350, "receive", "nolan", support, support),
+      step(2700, 900, "run", "blue2", target, upLine),
+      step(3050, 700, "pass", "nolan", support, upLine),
+      step(3700, 400, "receive", "blue2", upLine, upLine),
+    ];
+  }
+  if (row.id === "CM-27") {
+    const reset = p(Math.max(12, carrier.x - 4), carrier.y),
+      wide = p(30, target.y < 32 ? 50 : 14);
+    return [
+      step(0, 700, "pass", "blue1", carrier, nolan),
+      step(650, 400, "receive", "nolan", nolan, nolan),
+      step(800, 1000, "press", "red1", undefined, p(nolan.x + 4, nolan.y)),
+      step(1300, 700, "pass", "nolan", nolan, reset),
+      step(1700, 900, "run", "nolan", nolan, p(nolan.x - 9, nolan.y - 6)),
+      step(1950, 400, "receive", "blue1", reset, reset),
+      step(2450, 900, "pass", "blue1", reset, wide),
+      step(3300, 400, "receive", "blue2", wide, wide),
+      step(3700, 400, "celebrate", "nolan", undefined, undefined, "happy"),
+    ];
+  }
+  if (row.id === "CM-28") {
+    return [
+      step(0, 550, "pass", "blue1", carrier, nolan),
+      step(300, 1300, "run", "red1", undefined, p(66, 28)),
+      step(400, 1300, "run", "red2", undefined, p(64, 40)),
+      step(550, 350, "receive", "nolan", nolan, nolan),
+      step(950, 800, "pass", "nolan", nolan, target),
+      step(1700, 350, "receive", "blue2", target, target),
+      step(2100, 1000, "dribble", "blue2", target, p(80, target.y)),
+      step(3100, 500, "celebrate", "nolan", undefined, undefined, "happy"),
+    ];
+  }
+  if (row.id === "AM-30") {
+    const decoy = p(70, 44),
+      feet = p(70, 30);
+    return [
+      step(0, 1200, "run", "nolan", nolan, decoy),
+      step(250, 1200, "defend", "red1", undefined, p(68, 41)),
+      step(1300, 900, "run", "blue2", target, feet),
+      step(2200, 800, "pass", "blue1", carrier, feet),
+      step(2950, 400, "receive", "blue2", feet, feet),
+      step(3400, 500, "celebrate", "nolan", undefined, undefined, "happy"),
+    ];
+  }
+  if (row.id === "DM-19") {
+    const spot = p(24, 36);
+    return [
+      step(0, 1600, "run", "red3", undefined, spot),
+      step(200, 1400, "defend", "nolan", nolan, p(26, 35)),
+      step(1900, 700, "pass", "redBall", carrier, spot),
+      step(2500, 500, "block", "nolan", p(26, 35), spot),
+      step(3000, 700, "clear", "nolan", spot, p(42, 10)),
+      step(3700, 400, "celebrate", "blue1", undefined, undefined, "happy"),
+    ];
+  }
+  if (row.id === "DM-23") {
+    const line = p(carrier.x - 13, 32);
+    return [
+      step(0, 1400, "dribble", "redBall", carrier, p(carrier.x - 10, 32)),
+      step(150, 1200, "defend", "nolan", nolan, line),
+      step(500, 1500, "run", "blue1", undefined, p(carrier.x - 16, 38)),
+      step(800, 1500, "run", "blue2", undefined, p(carrier.x - 16, 26)),
+      step(
+        2000,
+        800,
+        "turn",
+        "redBall",
+        p(carrier.x - 10, 32),
+        p(carrier.x - 8, 44),
+      ),
+      step(2800, 700, "defend", "nolan", line, p(carrier.x - 11, 40)),
+      step(3500, 400, "celebrate", "nolan", undefined, undefined, "happy"),
+    ];
+  }
+  if (row.id === "CB-22") {
+    const flank = p(30, 47);
+    return [
+      step(0, 1400, "dribble", "redBall", carrier, flank),
+      step(200, 1300, "run", "nolan", nolan, p(20, 44)),
+      step(600, 1100, "defend", "blue1", undefined, p(26, 46)),
+      step(1900, 700, "dribble", "redBall", flank, p(26, 46)),
+      step(2400, 500, "block", "nolan", p(20, 44), p(24, 45)),
+      step(2900, 700, "clear", "nolan", p(24, 45), p(40, 56)),
+      step(3600, 400, "celebrate", "blue2", undefined, undefined, "happy"),
+    ];
+  }
+  if (row.id === "FB-25") {
+    return [
+      step(0, 1400, "dribble", "redBall", carrier, p(34, 30)),
+      step(100, 1600, "run", "nolan", nolan, p(30, 26)),
+      step(900, 1500, "run", "blue1", undefined, p(26, 38)),
+      step(1800, 700, "defend", "nolan", p(30, 26), p(31, 29)),
+      step(2000, 900, "turn", "redBall", p(34, 30), p(36, 40)),
+      step(3000, 600, "defend", "nolan", p(31, 29), p(33, 36)),
+      step(3600, 400, "celebrate", "nolan", undefined, undefined, "happy"),
+    ];
+  }
+  if (row.id === "GK-12") {
+    const touch = p(20, 33);
+    return [
+      step(0, 1200, "dribble", "redBall", carrier, touch),
+      step(300, 1200, "run", "nolan", nolan, p(18, 33)),
+      step(1600, 500, "dive", "nolan", p(18, 33), touch),
+      step(2100, 600, "catch", "nolan", touch, touch),
+      step(2800, 500, "celebrate", "blue1", undefined, undefined, "happy"),
+    ];
+  }
+  if (row.id === "GK-15") {
+    const dropPoint = p(11, 25),
+      outlet = p(40, 52);
+    return [
+      step(0, 800, "pass", "blue1", carrier, dropPoint),
+      step(100, 1200, "press", "redBall", undefined, p(17, 29)),
+      step(400, 1000, "run", "blue2", undefined, outlet),
+      step(700, 800, "run", "nolan", nolan, dropPoint),
+      step(1600, 800, "pass", "nolan", dropPoint, outlet),
+      step(2350, 400, "receive", "blue2", outlet, outlet),
+      step(2800, 900, "dribble", "blue2", outlet, p(48, 50)),
+      step(3700, 400, "celebrate", "nolan", undefined, undefined, "happy"),
+    ];
+  }
+  if (row.id === "GK-16") {
+    return [
+      step(0, 600, "catch", "nolan", nolan, nolan),
+      step(650, 500, "scan", "nolan", nolan, nolan),
+      step(700, 900, "run", "redBall", carrier, p(24, 28)),
+      step(800, 900, "run", "red2", undefined, p(24, 14)),
+      step(1500, 800, "pass", "nolan", nolan, p(22, 20)),
+      step(2250, 400, "receive", "blue1", p(22, 20), p(22, 20)),
+      step(2700, 900, "dribble", "blue1", p(22, 20), p(34, 22)),
+      step(3600, 400, "celebrate", "nolan", undefined, undefined, "happy"),
+    ];
+  }
+  if (row.id === "GK-18") {
+    const sprintTo = p(44, 51);
+    return [
+      step(0, 500, "catch", "nolan", nolan, nolan),
+      step(400, 1000, "run", "blue2", undefined, sprintTo),
+      step(600, 1000, "run", "redBall", carrier, p(50, 40)),
+      step(1000, 900, "pass", "nolan", nolan, sprintTo),
+      step(1850, 400, "receive", "blue2", sprintTo, sprintTo),
+      step(2300, 1000, "dribble", "blue2", sprintTo, p(58, 48)),
+      step(3300, 400, "celebrate", "nolan", undefined, undefined, "happy"),
+    ];
+  }
+  if (row.id === "GK-19") {
+    const safeWide = p(34, 53);
+    return [
+      step(0, 600, "catch", "nolan", nolan, nolan),
+      step(700, 600, "scan", "nolan", nolan, nolan),
+      step(800, 1100, "run", "blue2", undefined, safeWide),
+      step(1400, 700, "walk", "nolan", nolan, p(10, 34)),
+      step(2300, 800, "pass", "nolan", p(10, 34), safeWide),
+      step(3050, 400, "receive", "blue2", safeWide, safeWide),
+      step(3500, 400, "celebrate", "nolan", undefined, undefined, "happy"),
+    ];
+  }
+  if (row.id === "GK-22") {
+    const landing = p(15, 38);
+    return [
+      step(0, 700, "scan", "nolan", nolan, nolan),
+      step(400, 900, "run", "blue1", undefined, p(14, 26)),
+      step(700, 900, "run", "blue2", undefined, p(16, 40)),
+      step(1700, 900, "cross", "redBall", carrier, landing),
+      step(2550, 700, "clear", "blue2", landing, p(36, 54)),
+      step(3300, 400, "celebrate", "nolan", undefined, undefined, "happy"),
+    ];
+  }
+  if (row.id === "GK-23") {
+    return [
+      step(0, 700, "scan", "nolan", nolan, nolan),
+      step(400, 900, "run", "blue1", undefined, p(16, 28)),
+      step(700, 900, "run", "blue2", undefined, p(16, 31)),
+      step(1800, 700, "shoot", "redBall", carrier, p(6, 36)),
+      step(2200, 500, "dive", "nolan", nolan, p(6, 36)),
+      step(2700, 500, "catch", "nolan", p(6, 36), p(6, 36)),
+      step(3300, 400, "celebrate", "blue1", undefined, undefined, "happy"),
+    ];
+  }
+  if (row.id === "GK-27") {
+    const highPoint = p(16, 36);
+    return [
+      step(0, 900, "run", "red2", undefined, p(12, 36)),
+      step(300, 900, "cross", "redBall", carrier, highPoint),
+      step(500, 1000, "run", "nolan", nolan, highPoint),
+      step(1600, 600, "catch", "nolan", highPoint, highPoint),
+      step(2300, 600, "celebrate", "blue1", undefined, undefined, "happy"),
+    ];
+  }
+  if (row.id === "GK-29") {
+    const wideSide = p(10, 44);
+    return [
+      step(0, 800, "run", "nolan", nolan, wideSide),
+      step(300, 1000, "press", "redBall", undefined, p(31, 50)),
+      step(900, 800, "pass", "blue2", carrier, wideSide),
+      step(1650, 400, "receive", "nolan", wideSide, wideSide),
+      step(2150, 800, "pass", "nolan", wideSide, p(22, 20)),
+      step(2900, 400, "receive", "blue1", p(22, 20), p(22, 20)),
+      step(3400, 400, "celebrate", "nolan", undefined, undefined, "happy"),
+    ];
+  }
   if (row.id === "DM-01") {
     const danger = p(22, 32),
       screen = p((carrier.x + danger.x) / 2, (carrier.y + danger.y) / 2);
@@ -2837,6 +3138,256 @@ function dutyPoorAnimation(
   const family = dutyFamily(row),
     { nolan, carrier, badTo, target } = l,
     blueGoal = p(3, 32);
+  // ── Individually authored poor consequences for the 2026-07-18 review. ──
+  if (row.id === "STR-12") {
+    const high = target.y < 32,
+      nearPost = p(82, high ? 28 : 36);
+    return [
+      step(0, 700, "pass", "blue1", carrier, target),
+      step(650, 400, "receive", "blue2", target, target),
+      step(900, 900, "run", "nolan", nolan, nearPost),
+      step(1700, 800, "cross", "blue2", target, nearPost),
+      step(2450, 600, "shoot", "nolan", nearPost, p(93, 31)),
+      step(3050, 500, "catch", "redGK", p(93, 31), p(93, 31)),
+      step(3600, 400, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  }
+  if (row.id === "STR-17") {
+    return [
+      step(0, 800, "run", "nolan", nolan, p(84, 30)),
+      step(800, 900, "cross", "blue2", target, p(88, 26)),
+      step(1700, 600, "clear", "red1", p(88, 26), p(70, 12)),
+      step(2400, 500, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  }
+  if (row.id === "STR-18") {
+    const high = target.y < 32,
+      endLine = p(88, high ? 10 : 54),
+      spot = p(80, 34);
+    return [
+      step(0, 700, "pass", "blue1", carrier, target),
+      step(650, 400, "receive", "blue2", target, target),
+      step(1000, 1000, "dribble", "blue2", target, endLine),
+      step(1000, 1100, "run", "nolan", nolan, p(89, 32)),
+      step(2100, 800, "cross", "blue2", endLine, spot),
+      step(2850, 400, "receive", "red1", spot, spot),
+      step(3250, 600, "clear", "red1", spot, p(60, 10)),
+      step(3850, 400, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  }
+  if (row.id === "STR-29") {
+    const dropZone = p(68, target.y),
+      oldSpot = p(84, 32);
+    return [
+      step(0, 650, "pass", "blue1", carrier, target),
+      step(600, 350, "receive", "blue2", target, target),
+      step(950, 700, "cross", "blue2", target, p(82, 34)),
+      step(1600, 500, "clear", "red1", p(82, 34), dropZone),
+      step(1700, 900, "walk", "nolan", nolan, p(64, 40)),
+      step(2100, 600, "run", "blue2", target, dropZone),
+      step(2700, 350, "receive", "blue2", dropZone, dropZone),
+      step(3050, 700, "cross", "blue2", dropZone, oldSpot),
+      step(3700, 500, "clear", "red2", oldSpot, p(60, 50)),
+      step(4100, 400, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  }
+  if (row.id === "CM-16") {
+    return [
+      step(0, 700, "pass", "blue1", carrier, target),
+      step(650, 400, "receive", "blue2", target, target),
+      step(750, 900, "press", "red1", undefined, p(target.x + 4, target.y)),
+      step(900, 800, "walk", "nolan", nolan, p(46, 32)),
+      step(1800, 800, "dribble", "blue2", target, p(70, target.y)),
+      step(
+        2600,
+        500,
+        "block",
+        "red1",
+        p(target.x + 4, target.y),
+        p(70, target.y),
+      ),
+      step(3100, 800, "dribble", "red1", p(70, target.y), p(58, 34)),
+      step(3900, 400, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  }
+  if (row.id === "CM-27") {
+    const hopeful = p(60, 30);
+    return [
+      step(0, 700, "pass", "blue1", carrier, nolan),
+      step(650, 400, "receive", "nolan", nolan, nolan),
+      step(1150, 700, "pass", "nolan", nolan, hopeful),
+      step(1600, 900, "run", "nolan", nolan, p(nolan.x + 8, nolan.y + 2)),
+      step(1800, 500, "block", "red1", undefined, hopeful),
+      step(2300, 900, "dribble", "red1", hopeful, p(42, 32)),
+      step(3200, 600, "pass", "red1", p(42, 32), p(30, 38)),
+      step(3800, 400, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  }
+  if (row.id === "CM-28") {
+    return [
+      step(0, 550, "pass", "blue1", carrier, nolan),
+      step(400, 1100, "run", "red1", undefined, p(66, 28)),
+      step(500, 1100, "run", "red2", undefined, p(64, 40)),
+      step(550, 350, "receive", "nolan", nolan, nolan),
+      step(1000, 1200, "dribble", "nolan", nolan, p(50, 32)),
+      step(2300, 800, "pass", "nolan", p(50, 32), target),
+      step(3000, 500, "block", "red1", p(66, 28), target),
+      step(3500, 400, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  }
+  if (row.id === "AM-30") {
+    const crowd = p(74, 33);
+    return [
+      step(0, 1200, "react", "nolan", nolan, nolan),
+      step(400, 800, "run", "blue2", target, crowd),
+      step(900, 800, "defend", "red1", undefined, p(73, 34)),
+      step(1900, 800, "pass", "blue1", carrier, crowd),
+      step(2650, 500, "block", "red1", p(73, 34), crowd),
+      step(3150, 800, "dribble", "red1", crowd, p(60, 30)),
+      step(3950, 400, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  }
+  if (row.id === "DM-19") {
+    const spot = p(24, 36);
+    return [
+      step(0, 900, "walk", "nolan", nolan, p(33, 30)),
+      step(300, 1600, "run", "red3", undefined, spot),
+      step(2000, 700, "pass", "redBall", carrier, spot),
+      step(2650, 400, "receive", "red3", spot, spot),
+      step(3050, 600, "shoot", "red3", spot, blueGoal),
+      step(3700, 400, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  }
+  if (row.id === "DM-23") {
+    return [
+      step(0, 1200, "dribble", "redBall", carrier, p(28, 33)),
+      step(200, 1000, "run", "nolan", nolan, p(40, 28)),
+      step(1300, 900, "dribble", "redBall", p(28, 33), p(16, 33)),
+      step(2300, 600, "shoot", "redBall", p(16, 33), blueGoal),
+      step(3000, 400, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  }
+  if (row.id === "CB-22") {
+    const flank = p(30, 47);
+    return [
+      step(0, 1400, "dribble", "redBall", carrier, flank),
+      step(300, 700, "defend", "nolan", nolan, p(27, 30)),
+      step(1800, 1000, "dribble", "redBall", flank, p(16, 42)),
+      step(2900, 600, "shoot", "redBall", p(16, 42), p(3, 34)),
+      step(3500, 400, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  }
+  if (row.id === "FB-25") {
+    return [
+      step(0, 1400, "dribble", "redBall", carrier, p(34, 30)),
+      step(100, 1300, "walk", "nolan", nolan, p(44, 12)),
+      step(1500, 1100, "dribble", "redBall", p(34, 30), p(18, 32)),
+      step(2700, 600, "shoot", "redBall", p(18, 32), blueGoal),
+      step(3300, 400, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  }
+  if (row.id === "GK-12") {
+    const touch = p(20, 33);
+    return [
+      step(0, 1200, "dribble", "redBall", carrier, touch),
+      step(300, 600, "set", "nolan", nolan, nolan),
+      step(1500, 800, "dribble", "redBall", touch, p(14, 33)),
+      step(2400, 600, "shoot", "redBall", p(14, 33), p(3, 27)),
+      step(2600, 600, "dive", "nolan", nolan, p(5, 28)),
+      step(3300, 400, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  }
+  if (row.id === "GK-15") {
+    const dropPoint = p(11, 25),
+      touch = p(9, 34);
+    return [
+      step(0, 800, "pass", "blue1", carrier, dropPoint),
+      step(200, 1100, "press", "redBall", undefined, p(17, 29)),
+      step(500, 800, "run", "nolan", nolan, dropPoint),
+      step(1400, 400, "receive", "nolan", dropPoint, dropPoint),
+      step(1900, 700, "dribble", "nolan", dropPoint, touch),
+      step(2600, 500, "block", "redBall", p(17, 29), touch),
+      step(3100, 500, "shoot", "redBall", touch, blueGoal),
+      step(3700, 400, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  }
+  if (row.id === "GK-16") {
+    return [
+      step(0, 600, "catch", "nolan", nolan, nolan),
+      step(650, 900, "press", "redBall", carrier, p(26, 22)),
+      step(900, 700, "pass", "nolan", nolan, p(22, 20)),
+      step(1550, 400, "receive", "blue1", p(22, 20), p(22, 20)),
+      step(1950, 500, "block", "redBall", p(26, 22), p(22, 20)),
+      step(2450, 800, "dribble", "redBall", p(22, 20), p(12, 26)),
+      step(3250, 500, "shoot", "redBall", p(12, 26), p(3, 30)),
+      step(3750, 400, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  }
+  if (row.id === "GK-18") {
+    return [
+      step(0, 500, "catch", "nolan", nolan, nolan),
+      step(500, 900, "run", "redBall", carrier, p(46, 36)),
+      step(700, 900, "run", "red2", undefined, p(38, 46)),
+      step(900, 800, "set", "nolan", nolan, nolan),
+      step(2200, 900, "pass", "nolan", nolan, p(40, 48)),
+      step(3050, 500, "block", "red2", p(38, 46), p(40, 48)),
+      step(3550, 400, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  }
+  if (row.id === "GK-19") {
+    const rushed = p(30, 36);
+    return [
+      step(0, 500, "catch", "nolan", nolan, nolan),
+      step(600, 700, "pass", "nolan", nolan, rushed),
+      step(900, 800, "run", "redBall", carrier, rushed),
+      step(1700, 500, "block", "redBall", rushed, rushed),
+      step(2200, 800, "dribble", "redBall", rushed, p(18, 34)),
+      step(3000, 500, "shoot", "redBall", p(18, 34), p(3, 34)),
+      step(3500, 400, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  }
+  if (row.id === "GK-22") {
+    const farPost = p(13, 40);
+    return [
+      step(0, 800, "walk", "nolan", nolan, p(7, 32)),
+      step(400, 1000, "run", "red2", undefined, farPost),
+      step(1600, 900, "cross", "redBall", carrier, farPost),
+      step(2450, 400, "receive", "red2", farPost, farPost),
+      step(2850, 500, "shoot", "red2", farPost, p(3, 34)),
+      step(3350, 400, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  }
+  if (row.id === "GK-23") {
+    return [
+      step(0, 900, "walk", "nolan", nolan, p(9, 32)),
+      step(1500, 800, "shoot", "redBall", carrier, p(4, 38)),
+      step(1900, 600, "dive", "nolan", p(9, 32), p(6, 37)),
+      step(2600, 500, "react", "nolan", undefined, undefined, "worried"),
+      step(3100, 400, "react", "blue1", undefined, undefined, "worried"),
+    ];
+  }
+  if (row.id === "GK-27") {
+    return [
+      step(0, 900, "run", "red2", undefined, p(11, 35)),
+      step(400, 700, "walk", "nolan", nolan, p(7, 33)),
+      step(1300, 900, "cross", "redBall", carrier, p(9, 36)),
+      step(2200, 400, "receive", "red2", p(11, 35), p(9, 36)),
+      step(2650, 500, "shoot", "red2", p(9, 36), p(3, 33)),
+      step(3200, 400, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  }
+  if (row.id === "GK-29") {
+    const looseWide = p(9, 48);
+    return [
+      step(0, 600, "set", "nolan", nolan, nolan),
+      step(300, 1000, "press", "redBall", undefined, p(31, 50)),
+      step(900, 800, "pass", "blue2", carrier, looseWide),
+      step(1800, 900, "run", "redBall", p(31, 50), p(12, 49)),
+      step(2700, 400, "receive", "redBall", looseWide, p(12, 49)),
+      step(3100, 500, "shoot", "redBall", p(12, 49), p(4, 36)),
+      step(3600, 400, "react", "nolan", undefined, undefined, "worried"),
+    ];
+  }
   if (row.id === "DM-07")
     return [
       // Staying high puts Tom behind the striker's press; the centre-back's
@@ -4346,7 +4897,12 @@ function makeScene(row: InventoryRow, index: number): AnimatedScenario {
           l,
           quality,
           label,
-          enforceOptionResult(label, quality, l, raw),
+          // Individually authored timelines already prove their named skill;
+          // the generic option-intent rewriter would collapse them back into
+          // the shared templates this review removed.
+          bespokeAnimationIds.has(row.id)
+            ? raw
+            : enforceOptionResult(label, quality, l, raw),
         ),
       ),
       l,
@@ -4750,5 +5306,21 @@ export const scenePacks: ScenePack[] = (
 }));
 export const sceneById = (id: string) =>
   animatedScenarios.find((scene) => scene.id === id);
+/**
+ * First Lessons: a hand-picked starter path for a child who chases the ball
+ * everywhere. Order matters — spread out, learn who presses, look up before
+ * touching, then the two simplest combinations.
+ */
+export const starterSceneIds = [
+  "TW-01", // spread out — don't share one lane
+  "WNG-01", // hold width instead of crowding the ball
+  "TW-08", // one presses, the others cover and balance
+  "TW-07", // defend a 2v1 by delaying, not diving
+  "CM-01", // scan before the ball arrives
+  "CM-04", // stay behind the ball as the safe outlet
+  "TW-03", // wall pass: pass and run
+  "TW-02", // support triangle, never a straight line
+];
+export const starterScenes = starterSceneIds.map((id) => sceneById(id)!);
 export const packById = (id: string) =>
   scenePacks.find((pack) => pack.id === id);

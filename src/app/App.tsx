@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { animatedScenarios, packById, scenePacks } from "../lessons";
+import {
+  animatedScenarios,
+  packById,
+  sceneById,
+  scenePacks,
+  starterScenes,
+} from "../lessons";
+import { mapRoleById, positionPackIds } from "../lessons/roleMap";
 import {
   loadProgress,
   needsPractice,
@@ -20,6 +27,7 @@ import {
   SceneListScreen,
 } from "../screens/LessonSelectScreen";
 import { ParentModeScreen } from "../screens/ParentModeScreen";
+import { RoleMapScreen } from "../screens/RoleMapScreen";
 import type {
   ChoiceResult,
   Progress,
@@ -27,7 +35,7 @@ import type {
   Settings,
 } from "../types/soccer";
 
-type Screen = "home" | "packs" | "list" | "scene" | "parent";
+type Screen = "home" | "packs" | "list" | "scene" | "parent" | "roles";
 const SETTINGS_KEY = "nolan-animation-settings-v1";
 const defaultSettings: Settings = {
   speechEnabled: true,
@@ -52,6 +60,8 @@ export function App() {
   const [settings, setSettings] = useState<Settings>(() => loadSettings());
   const [packId, setPackId] = useState<SceneCategory>("winger");
   const [practiceMode, setPracticeMode] = useState(false);
+  const [starterMode, setStarterMode] = useState(false);
+  const [positionMode, setPositionMode] = useState(false);
   const [practiceIds, setPracticeIds] = useState<string[]>([]);
   const [sceneIndex, setSceneIndex] = useState(0);
   const [holding, setHolding] = useState(false);
@@ -70,6 +80,16 @@ export function App() {
         .filter((item): item is NonNullable<typeof item> => Boolean(item)),
     [practiceIds],
   );
+  const positionRole = settings.positionId
+    ? mapRoleById(settings.positionId)
+    : undefined;
+  const positionScenes = useMemo(
+    () =>
+      (settings.positionId ? (positionPackIds[settings.positionId] ?? []) : [])
+        .map((id) => sceneById(id))
+        .filter((item): item is NonNullable<typeof item> => Boolean(item)),
+    [settings.positionId],
+  );
   const normalPack = packById(packId) ?? scenePacks[0];
   const pack = practiceMode
     ? {
@@ -79,7 +99,23 @@ export function App() {
         description: "Revisit decisions that need another try.",
         scenes: practiceScenes,
       }
-    : normalPack;
+    : starterMode
+      ? {
+          ...normalPack,
+          name: "First Lessons",
+          icon: "🌱",
+          description: "Don't chase the ball. Know your job. Play together.",
+          scenes: starterScenes,
+        }
+      : positionMode && positionRole
+        ? {
+            ...normalPack,
+            name: "My Position Pack",
+            icon: positionRole.emoji,
+            description: `${positionRole.name} lessons picked for your real 2-2-2 team.`,
+            scenes: positionScenes,
+          }
+        : normalPack;
   const rawScene = pack.scenes[sceneIndex] ?? normalPack.scenes[0];
   const scene = useMemo(
     () => personalizeScenario(rawScene, settings.childName),
@@ -140,6 +176,7 @@ export function App() {
           setSettings({ ...settings, childName: cleanChildName(childName) })
         }
         onPlay={() => setScreen("packs")}
+        onRoles={() => setScreen("roles")}
         onToggleSound={() =>
           setSettings({ ...settings, speechEnabled: !settings.speechEnabled })
         }
@@ -154,18 +191,68 @@ export function App() {
         progress={progress}
         practiceCount={practiceCandidates.length}
         onHome={home}
+        starterDone={
+          starterScenes.filter(
+            (item) => progress.sceneResults[item.id]?.completed,
+          ).length
+        }
+        starterTotal={starterScenes.length}
+        position={
+          positionRole
+            ? {
+                name: positionRole.name,
+                emoji: positionRole.emoji,
+                color: positionRole.color,
+                done: positionScenes.filter(
+                  (item) => progress.sceneResults[item.id]?.completed,
+                ).length,
+                total: positionScenes.length,
+              }
+            : undefined
+        }
+        onRoles={() => setScreen("roles")}
+        onPosition={() => {
+          setPracticeMode(false);
+          setStarterMode(false);
+          setPositionMode(true);
+          setSceneIndex(0);
+          setScreen("list");
+        }}
+        onStarter={() => {
+          setPracticeMode(false);
+          setPositionMode(false);
+          setStarterMode(true);
+          setSceneIndex(0);
+          setScreen("list");
+        }}
         onPractice={() => {
           setPracticeIds(practiceCandidates.map((item) => item.id));
+          setStarterMode(false);
+          setPositionMode(false);
           setPracticeMode(true);
           setSceneIndex(0);
           setScreen("list");
         }}
         onPack={(id) => {
           setPracticeMode(false);
+          setStarterMode(false);
+          setPositionMode(false);
           setPackId(id);
           setSceneIndex(0);
           setScreen("list");
         }}
+      />
+    );
+  if (screen === "roles")
+    return (
+      <RoleMapScreen
+        childName={settings.childName}
+        positionId={settings.positionId}
+        onPositionChange={(positionId) =>
+          setSettings({ ...settings, positionId })
+        }
+        onHome={home}
+        onSpeak={speak}
       />
     );
   if (screen === "list")

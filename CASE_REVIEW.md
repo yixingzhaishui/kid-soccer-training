@@ -129,6 +129,63 @@ skill contradiction below the required score.
 These are gates, not approval. The individual review rows above are the source
 of truth for tactical approval.
 
+## Similarity and realism remediation batch — 2026-07-18 (second pass)
+
+A quantized visual audit (`npm run audit:similarity`) compared what the child
+actually watches — Tom's route plus every ball flight — across all scenes in
+each role pack, plus token-level narration overlap. It found 66 high-similarity
+pairs, seven groups of scenes whose choice animations were exactly identical
+(CM-06/27, STR-12/18, STR-17/29, CM-16/28, GK-12/14, GK-15/19/29, GK-16/18),
+and template intro text repeated inside packs.
+
+Repairs, each reviewed individually:
+
+- **Hand-written scene text.** 100+ expansion scenes received individually
+  written triggers and good/poor consequences in
+  `src/lessons/sceneOverrides.ts`, replacing rotating template sentences.
+- **Individually authored animations.** 21 scenes now have bespoke good and
+  poor timelines (STR-12/17/18/29, CM-16/27/28, AM-30, DM-19/23, CB-22,
+  FB-25, GK-12/15/16/18/19/22/23/27/29) that prove their named skill
+  distinctly. These bypass the generic option-intent rewriter.
+- **Tactical corrections.**
+  - GK-22/GK-23 set-piece organization previously gave the set piece to
+    Blue; a keeper organizes a wall or line when **Red** has the kick. Both
+    triggers now start from a red free kick, and GK-23 was retitled from
+    "Build the Corner-Kick Wall" (walls are not built for corners) to
+    "Set the Wall for a Central Free Kick".
+  - GK-15/GK-29 teach back-pass play; the ball now visibly starts with the
+    blue defender who plays it back, and Tom plays it with his feet only —
+    the old template caught a back pass with his hands, which is illegal.
+  - STR-12 teaches the dummy; Tom now visibly lets the ball run through to
+    the teammate behind instead of touching it.
+  - FB-25 recovers after an attacking corner; Tom now starts high up the
+    pitch and sprints the inside recovery diagonal.
+- **Regression gate.** `tests/similarity.test.ts` fails the build if two
+  scenes in one pack ever collapse to the same quantized visual play again,
+  or if any intro or consequence text is cloned verbatim.
+
+After the batch: 0 identical animation groups, 0 cloned intros, and one
+remaining 0.64-similarity pair (WNG-13/WNG-29 — both wall-pass scenes with
+distinct triggers, text, and endpoints), with all named-skill, possession,
+tactical, spatial, and 100-point quality gates passing.
+
+## Narration completion pass — 2026-07-19 (third pass)
+
+The second pass rewrote the 102 scenes flagged by the similarity audit, which
+left 80 expansion scenes whose animations passed every gate but whose
+narration still came from the rotating sentence templates. This pass
+hand-wrote the trigger and both consequence lines for all 80 (listed in the
+"second pass" sections of `src/lessons/sceneOverrides.ts`), so every one of
+the 250 scenes now has individually written, scene-specific text.
+
+Verification after the pass: template-intro count 0/250; skill-id map
+byte-identical to the pre-pass baseline (six trigger sentences were reworded
+during review because a first draft collided with a duty-family or skill
+keyword); all named-skill, spatial, tactical, possession, and 100-point
+quality gates green with a curriculum average of 100; similarity audit
+unchanged (0 identical animation groups, 0 cloned narrations, one accepted
+0.64 pair WNG-13/WNG-29).
+
 ## Full curriculum coach-contract ledger — 2026-07-18
 
 `Coach-verified` means the story title and primary skill were checked one by one, and the actual normalized timeline passed the named-skill, possession, direction, open-lane, moving-opponent, distinct-option, consequence, and 390px phone gates. It does not claim independent licensed-coach certification.
@@ -381,7 +438,7 @@ on desktop Chromium, iPhone Chromium, and iPhone WebKit.
 | GK-20 | Goalkeeper | Switch Distribution After a Press | G09 | 100/100 | Coach-verified |
 | GK-21 | Goalkeeper | Call the Defensive Line Up | G10 | 100/100 | Coach-verified |
 | GK-22 | Goalkeeper | Organize a Wide Free Kick | G10 | 100/100 | Coach-verified |
-| GK-23 | Goalkeeper | Build the Corner-Kick Wall | G10 | 100/100 | Coach-verified |
+| GK-23 | Goalkeeper | Set the Wall for a Central Free Kick | G10 | 100/100 | Coach-verified |
 | GK-24 | Goalkeeper | Claim a Near-Post Corner | G07 | 100/100 | Coach-verified |
 | GK-25 | Goalkeeper | Punch Through Crowded Traffic | G08 | 100/100 | Coach-verified |
 | GK-26 | Goalkeeper | Stay for an Outswinging Cross | G12 | 100/100 | Coach-verified |

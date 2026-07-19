@@ -6,6 +6,7 @@ type Props = {
   total: number;
   onChildName: (name: string) => void;
   onPlay: () => void;
+  onRoles: () => void;
   onToggleSound: () => void;
   onParentHoldStart: () => void;
   onParentHoldEnd: () => void;
@@ -45,6 +46,9 @@ export function HomeScreen(props: Props) {
       </div>
       <button className="primary huge home-play" onClick={props.onPlay}>
         ▶ Play soccer
+      </button>
+      <button className="home-roles" onClick={props.onRoles}>
+        🗺️ Learn my position
       </button>
       <p className="home-progress">
         {props.completed} of {props.total} stories played

@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "audit:scenes": "vite-node scripts/inspect-scenes.ts",
+    "audit:similarity": "vite-node scripts/similarity-audit.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "format": "prettier --write src tests scripts",

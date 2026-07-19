@@ -4,6 +4,8 @@ import {
   displayChildName,
   personalizeText,
 } from "../logic/personalize";
+import { downloadCueCard } from "../logic/cueCard";
+import { mapRoleById, mapRoles } from "../lessons/roleMap";
 import { resetProgress, totalScore } from "../logic/progress";
 import { scoreCurriculum, scoreScenario } from "../logic/scenarioQuality";
 import type { Progress, Settings } from "../types/soccer";
@@ -231,6 +233,40 @@ export function ParentModeScreen({
           })()
         ) : (
           <p>Play a story to see coaching notes.</p>
+        )}
+      </section>
+      <section className="parent-panel">
+        <h2>Sideline cue card</h2>
+        <p>
+          One shout word per position. Save the card to your phone and point
+          from the sideline instead of coaching sentences.
+        </p>
+        <ul className="cue-list">
+          {mapRoles.map((role) => (
+            <li
+              key={role.id}
+              className={role.id === settings.positionId ? "mine" : ""}
+            >
+              <span>
+                {role.emoji} {role.name}
+                {role.id === settings.positionId ? ` — ${name}` : ""}
+              </span>
+              <strong>📣 {role.cue}</strong>
+            </li>
+          ))}
+        </ul>
+        <button
+          className="secondary"
+          onClick={() => downloadCueCard(name, settings.positionId)}
+        >
+          💾 Save cue card to phone
+        </button>
+        {settings.positionId && (
+          <p className="cue-note">
+            {name} plays{" "}
+            <strong>{mapRoleById(settings.positionId)?.name}</strong> — that row
+            is highlighted on the card.
+          </p>
         )}
       </section>
       <section className="parent-panel">

@@ -1,20 +1,71 @@
 import { scenePacks } from "../lessons";
+import { ROLE_QUIZ_BEST_KEY } from "../lessons/roleMap";
 import { needsPractice } from "../logic/progress";
 import type { Progress, SceneCategory, ScenePack } from "../types/soccer";
+
+const quizBestStars = () => {
+  const raw = Number(localStorage.getItem(ROLE_QUIZ_BEST_KEY) ?? "0");
+  return Number.isFinite(raw) ? raw : 0;
+};
 type PackProps = {
   progress: Progress;
   practiceCount: number;
+  starterDone: number;
+  starterTotal: number;
+  position?: {
+    name: string;
+    emoji: string;
+    color: string;
+    done: number;
+    total: number;
+  };
   onHome: () => void;
+  onRoles: () => void;
+  onPosition: () => void;
+  onStarter: () => void;
   onPractice: () => void;
   onPack: (id: SceneCategory) => void;
 };
 export function PackSelectScreen({
   progress,
   practiceCount,
+  starterDone,
+  starterTotal,
+  position,
   onHome,
+  onRoles,
+  onPosition,
+  onStarter,
   onPractice,
   onPack,
 }: PackProps) {
+  const quizBest = quizBestStars();
+  const badges = [
+    {
+      id: "graduate",
+      icon: "🌱",
+      label: "No-More-Chasing Graduate",
+      earned: starterDone >= starterTotal,
+      hint: "Finish all First Lessons",
+    },
+    {
+      id: "zones",
+      icon: "🗺️",
+      label: "Zone Master",
+      earned: quizBest >= 6,
+      hint: "Score 6/6 in the position quiz",
+    },
+    {
+      id: "position",
+      icon: position?.emoji ?? "⭐",
+      label: "Position Pro",
+      earned: Boolean(position && position.done >= position.total),
+      hint: "Finish your position pack",
+    },
+  ];
+  const pathDone =
+    starterDone >= starterTotal &&
+    Boolean(position && position.done >= position.total);
   return (
     <main className="screen select-screen">
       <header className="screen-header">
@@ -27,6 +78,61 @@ export function PackSelectScreen({
         </div>
         <div />
       </header>
+      <div className="badge-strip" aria-label="Earned badges">
+        {badges.map((badge) => (
+          <span
+            key={badge.id}
+            className={`badge ${badge.earned ? "earned" : ""}`}
+            title={badge.earned ? badge.label : badge.hint}
+          >
+            <b>{badge.earned ? badge.icon : "🔒"}</b>
+            <small>{badge.earned ? badge.label : badge.hint}</small>
+          </span>
+        ))}
+      </div>
+      <p className="coach-path-label">
+        🧑‍🏫 Coach’s path: First Lessons → learn your position → your position
+        pack
+      </p>
+      <button className="practice-card starter-card" onClick={onStarter}>
+        <span>🌱</span>
+        <span>
+          <strong>Step 1 · First Lessons</strong>
+          <small>
+            Don’t chase the ball. Know your job. Play together. ({starterDone}/
+            {starterTotal})
+          </small>
+        </span>
+        <b>{starterDone >= starterTotal ? "✅" : "▶"}</b>
+      </button>
+      {position ? (
+        <button
+          className="practice-card position-card"
+          style={{ "--pack-color": position.color } as React.CSSProperties}
+          onClick={onPosition}
+        >
+          <span>{position.emoji}</span>
+          <span>
+            <strong>Step 2 · My Position Pack</strong>
+            <small>
+              {position.name} lessons from your real 2-2-2 team. (
+              {position.done}/{position.total})
+            </small>
+          </span>
+          <b>{position.done >= position.total ? "✅" : "▶"}</b>
+        </button>
+      ) : (
+        <button className="practice-card position-card" onClick={onRoles}>
+          <span>🗺️</span>
+          <span>
+            <strong>Step 2 · Pick my position</strong>
+            <small>
+              Open the position map and choose where you play in the 2-2-2.
+            </small>
+          </span>
+          <b>▶</b>
+        </button>
+      )}
       {practiceCount > 0 && (
         <button className="practice-card" onClick={onPractice}>
           <span>🔁</span>
@@ -40,6 +146,11 @@ export function PackSelectScreen({
           <b>▶</b>
         </button>
       )}
+      <p className="coach-path-label advanced-label">
+        {pathDone
+          ? "🎉 Path complete! Explore every position below."
+          : "Step 3 · Advanced packs — coach’s tip: finish your path first."}
+      </p>
       <div className="pack-grid">
         {scenePacks.map((pack) => {
           const complete = pack.scenes.filter(
